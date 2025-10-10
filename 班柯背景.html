@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班柯背景介绍</title>
+    <style>
+        body{
+            background:url(img/背景图-1.jpg);
+            font-family:"楷体";
+            font-size:25px;
+            padding: 40px 20px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        #content-wrapper {
+            width: 100%;
+            max-width: 800px;
+        }
+        /* 核心修改：将透明度从0.7降至0.4，容器更通透 */
+        #text{
+            color: #1a1a1a;
+            text-shadow: 0 0 3px rgba(255,255,255,1); /* 增强文字阴影，确保在透明背景上清晰 */
+            line-height: 1.8;
+            margin-bottom: 80px;
+            text-align: center;
+            white-space: pre-line;
+            /* 透明度调整：rgba最后一位从0.7改为0.4，数值越小越透明 */
+            background-color: rgba(255, 255, 255, 0.4);
+            padding: 30px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(3px); /* 保留背景模糊，增强分层感 */
+        }
+        /* 标题样式优化，适配透明背景 */
+        #text::first-line {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 30px 0;
+            display: block;
+            color: #1a365d;
+            text-shadow: 0 0 2px rgba(255,255,255,0.9);
+        }
+        /* 以下样式不变 */
+        #text::after {
+            content: "|"; 
+            color: #e74c3c; 
+            animation: blink 0.8s infinite alternate; 
+            margin-left: 5px; 
+        }
+        @keyframes blink {
+            from { opacity: 1; } 
+            to { opacity: 0; } 
+        }
+        a{
+            display:none;
+            position:fixed;
+            right:0;
+            bottom:0;
+            margin:10px;
+            font-size:20px;
+            color: #e74c3c;
+            text-decoration: none; 
+        }
+        a:hover{
+            text-decoration:underline;
+        }
+        .bottom-jump-btn {
+            display: block;
+            opacity: 0;
+            transition: all 0.3s ease;
+            position: fixed;
+            right: 30px; 
+            bottom: 30px; 
+            padding: 12px 24px; 
+            background-color: #ffffff;
+            color: #1a365d;
+            border: 3px solid #1a365d;
+            box-shadow: 0 0 0 2px #0f2447;
+            border-radius: 8px;
+            font-size: 20px;
+            cursor: pointer; 
+            font-weight: bold;
+            -webkit-text-stroke: 1px #0f2447;
+            transform-origin: center;
+            z-index: 999;
+        }
+        .bottom-jump-btn:hover {
+            background-color: #f5f5f5; 
+            border-color: #0f2447;
+            box-shadow: 0 0 0 2px #08182e;
+            transform: translateY(-2px);
+        }
+        .bottom-jump-btn.clicked {
+            animation: btnClick 0.5s forwards;
+        }
+        @keyframes btnClick {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.9); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="content-wrapper">
+        <div id="text"></div>
+    </div>
+    <button class="bottom-jump-btn">继续</button>
+    <a ></a >
+    <script>
+        var text = '角色故事\n'+
+                   '你是王国忠诚的大将，麦克白的战友，但更是他命运的映照。在平定叛乱、辅佐邓肯登上王位的过程中，你的功劳与麦克白不相上下，甚至更大。但在庆功宴上，邓肯却只大肆封赏麦克白为“考特爵士”，对你的功劳只是口头嘉奖。这份不公，像一根刺扎在你心里。女巫预言你的子孙将成为国王，这让你内心无比复杂——既有渴望，又有恐惧，更有对麦克白的一丝嫉妒。案发前，马尔康和麦克德夫都曾试图拉拢你，而麦克白也暗示你应与他共同实现预言。你成了三方势力中的关键支点。 你并非直接凶手，但你选择了沉默，甚至提供了无形的纵容。你的手是干净的，但你的灵魂早已沾染了野心的尘埃。\n\n'+
+                   
+					'案发后 - 游戏开始时\n'+
+					'得知邓肯王死讯，你强烈怀疑甚至确定麦克白就是凶手，且夫人是同谋。你知道第二名侍卫的失踪与他们有关...';
+
+        
+        var t = document.getElementById("text");
+        var btn = document.querySelector("a");
+        var loginBtn = document.querySelector('.bottom-jump-btn');
+        var index = 0;
+        function Writer() {
+            if (index < text.length) {
+                t.innerHTML += text[index++];
+                setTimeout(Writer, 120);
+            } else {
+                t.style.animation = "none"; 
+                const cursor = document.createElement('style');
+                cursor.textContent = "#text::after { display: none; }";
+                document.head.appendChild(cursor); 
+                btn.style.display = "block";
+                loginBtn.style.opacity = 1;
+            }
+        }
+        Writer();
+        const jumpBtn = document.querySelector('.bottom-jump-btn');
+        jumpBtn.addEventListener('click', function() {
+            this.classList.add('clicked');
+            setTimeout(()=>{
+                window.location.href = '班柯体验.html';
+            },500);
+        });
+    </script>
+</body>
+</html>
