@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jubensha</title>
+    <link href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="welcome-title">Welcome to Macbeth's castle</h1>
+        <div class="form">
+            <input type="text" class="forminput" placeholder="账号">
+            <input type="password" class="forminput" placeholder="密码">
+            <button class="btn-login">登录游戏</button>
+            <button class="btn-register" >前往注册</button>
+            <button class="btn-story">关于<br>我们</button>
+        </div>
+    </div>
+    <div class="register-panel" style="display: none;">
+      <h2>账号注册</h2>
+      <input type="text" class="reg-input" placeholder="设置账号（3-12位）">
+      <input type="password" class="reg-input" placeholder="设置密码（6-16位）">
+      <input type="password" class="reg-input" placeholder="确认密码">
+      <div class="reg-btn-group">
+        <button class="btn-reg-confirm">完成注册</button>
+        <button class="btn-reg-cancel">取消</button>
+      </div>
+    </div>
+<!-- 新增遮罩层（默认隐藏，用于凸显注册面板） -->
+ <div class="mask" style="display: none;"></div> 
+      
+    <ul class="bg-squares">
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+    </ul>   
+    <script>
+  // 页面加载完成后执行
+  window.onload = function() {
+  const titleElement = document.querySelector('.welcome-title');
+  const titleText = titleElement.textContent;
+  const words = titleText.split(' '); // 按空格拆分单词
+  
+  titleElement.innerHTML = '';
+  words.forEach((word, index) => {
+    const wordSpan = document.createElement('span');
+    wordSpan.className = 'word-span';
+    wordSpan.textContent = word + ' '; // 保留单词间空格
+    // 每个单词延迟0.3s出场，形成逐个出现效果
+    wordSpan.style.animationDelay = `${index * 0.3}s`;
+    titleElement.appendChild(wordSpan);
+    });
+    };
+    </script>。<!--逐字出现动画-->
+    <script src="./js/denglu.js"></script>
+    <script src="./js/跳到团队介绍.js"></script>
+</body>
+<style>
+ *{
+    margin:0;
+    padding:0;
+    box-sizing: border-box;
+  }
+  body { 
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: url("img/IMG_5678.JPG"); 
+  background-repeat: no-repeat; 
+  background-size: cover; 
+  background-attachment: fixed; 
+  background-position: center center; 
+  overflow: hidden;
+  }
+  body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 0;
+ }
+  .container{
+    position: relative;
+    text-align: center;
+    color: #fff;
+  }
+  .container h1{
+    font-size: 60px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 15px;
+    transition: 1s ease-in-out;
+  }
+  .form{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    opacity: 1;
+    transition: opacity 0.5s;
+  }
+  .form input{
+    outline: none;
+    border: 1px solid rgba(255, 255, 255, 0.4); /* 修复原"rgha"拼写错误 */
+    background-color: rgba(255, 255, 255, 0.2);
+    width: 250px;
+    padding: 10px 15px;
+    border-radius: 3px;
+    margin: 0 auto 10px auto;
+    text-align: center;
+    color: #fff;
+    font-size: 15px;
+    transition: 0.25s;
+  }
+  .form input::placeholder{ /* 修复原代码"inout"拼写错误 */
+    color: #fff;
+    font-size: 14px;
+    font-weight: 300;
+  }
+  /* 登录按钮：保持黑色字体 */
+  .btn-login{
+    outline: none;
+    background-color: #fff;
+    color: #000; 
+    border: none;
+    width: 250px;
+    padding: 10px 15px;
+    border-radius: 3px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.25s;
+  }
+  .form input:hover{
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+   .form input:focus{
+    background-color: #fff;
+    width: 300px;
+    color: #ff719a;
+   } 
+   .btn-login:hover{
+    background-color: #f5f7f9;
+    color: #333; 
+   }
+   /* 前往注册按钮：保持黑色字体 */
+   .btn-register {
+    background-color: rgba(255, 255, 255, 0.3);
+    color: #000; 
+    margin-top: 12px;
+    margin-bottom: 12px;
+    outline: none;
+    border: none;
+    width: 250px;
+    padding: 10px 15px;
+    border-radius: 3px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.25s;
+  }
+  .btn-register:hover {
+    background-color: rgba(255,255,255,0.5);
+    color: #222; 
+  }
+   .bg-squares{
+    list-style: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+   }
+    .bg-squares li{
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.08);
+    position: absolute;
+    bottom: -160px;
+    animation: square 20s linear infinite;
+   }
+   .bg-squares li:nth-child(1){
+    left: 10%;
+   }
+   .bg-squares li:nth-child(2){
+    left: 20%;
+    width: 80px;
+    height: 80px;
+    animation-delay: 2s;
+    animation-duration: 17s;
+   }
+   .bg-squares li:nth-child(3){
+    left: 25%;
+    animation-delay: 4s;
+   }
+   .bg-squares li:nth-child(4){
+    left: 40%;
+    width: 60px;
+    height: 60px;
+    background-color: rgba(255, 255, 255, 0.25);
+    animation-duration: 22s;
+   }
+   .bg-squares li:nth-child(5){
+    left: 70%;
+   }
+   .bg-squares li:nth-child(6){
+    left: 80%;
+    width: 120px;
+    height: 120px;
+    background-color: rgba(255, 255, 255, 0.2);
+    animation-delay: 3s;
+   }
+   .bg-squares li:nth-child(7){
+    left: 32%;
+    width: 160px;
+    height: 160px;
+    animation-delay: 7s;
+   }
+    .bg-squares li:nth-child(8){
+    left: 55%;
+    width: 20px;
+    height: 20px;
+    animation-delay: 15s;
+    animation-duration: 40s;
+   }
+    .bg-squares li:nth-child(9){
+    left: 25%;
+    width: 10px;
+    height: 10px;
+    background-color: rgba(255, 255, 255, 0.3);
+    animation-delay: 2s;
+    animation-duration: 40s;
+   }
+    .bg-squares li:nth-child(10){
+    left: 90%;
+    width: 160px;
+    height: 160px;
+    animation-delay: 11s;
+   }
+   .container.success h1{
+    transform: translateY(75px);
+   }
+   .container.success .form{
+    opacity: 0;
+    visibility: hidden;
+   }
+   @keyframes square{
+    0%{
+        transform: translateY(0);
+    }
+    100%{
+        transform: translateY(-120vh) rotate(600deg);
+    }
+   }
+   /* 遮罩层样式 */
+  .mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.3);
+    z-index: 3;
+    backdrop-filter: blur(2px);
+  }
+  /* 注册面板样式 */
+  .register-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #ffd166, #ff8a65, #ff6b9d);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    z-index: 4;
+    text-align: center;
+    color: #fff;
+    width: 100%;
+    max-width: 320px;
+  }
+  .register-panel h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .reg-input {
+    outline: none;
+    border: 1px solid rgba(255,255,255,0.5);
+    background-color: rgba(255,255,255,0.2);
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 3px;
+    margin: 0 auto 12px auto;
+    text-align: center;
+    color: #fff;
+    font-size: 15px;
+    transition: 0.25s;
+  }
+  .reg-input::placeholder {
+    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+  }
+  .reg-input:focus {
+    background-color: #fff;
+    color: #ff719a;
+  }
+  .reg-btn-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .btn-reg-confirm, .btn-reg-cancel {
+    outline: none;
+    border: none;
+    padding: 12px 0;
+    border-radius: 3px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.25s;
+    flex: 1;
+  }
+  .btn-reg-confirm {
+    background-color: #fff;
+    color: #ff719a;
+  }
+  .btn-reg-cancel {
+    background-color: rgba(255,255,255,0.3);
+    color: #fff;
+  }
+  .btn-reg-confirm:hover {
+    background-color: #f5f7f9;
+  }
+  .btn-reg-cancel:hover {
+    background-color: rgba(255,255,255,0.5);
+  }
+  .btn-story {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    width: 80px;
+    height: 80px;
+    text-align: center;
+    line-height: 1.4;
+    padding: 12px 0;
+    background-color: #333;
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    }
+    .btn-story:hover{
+      background-color: #555;
+    }
+   .welcome-title {
+  font-family: 'Uncial Antiqua', 'Garamond', 'Times New Roman', serif;
+  font-size: 82px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  margin-bottom: 15px;
+  opacity: 1;
+  transform: translateY(-15px) translateX(15px);
+  text-shadow: 0 0 10px rgba(255,255,255,0.8), 3px 3px 6px rgba(0, 0, 0, 0.5);
+  -webkit-text-stroke: 1.5px #fff; 
+  -moz-text-stroke: 1.5px #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -moz-font-smoothing: antialiased;
+  background: linear-gradient(90deg, #fffacd, #ff4500, #f0f8ff);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: textColorShift 4s ease infinite;
+ }
+    /* 单个单词出场动画 */
+    @keyframes wordFadeIn {
+    from {
+    opacity: 0;
+    transform: translateY(20px);
+    }
+    to {
+    opacity: 1;
+    transform: translateY(0);
+    }
+    }
+    .word-span {
+    display: inline-block;
+    opacity: 0;
+    animation: wordFadeIn 0.8s ease forwards;
+    letter-spacing: 2px;
+    margin-right: 20px;
+    }
+    @keyframes textColorShift {
+    0% { 
+    background-position: 0% 50%; 
+   }
+    50% { 
+    background-position: 100% 50%; 
+   }
+    100% { 
+    background-position: 0% 50%; 
+   }
+   }
+</style>
+</body>
+</html>
