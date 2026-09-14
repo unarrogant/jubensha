@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>麦克德夫角色体验</title>
+		<link rel="stylesheet" href="css/wangfatiyan.css"> 
+	</head>
+	<body>
+		<!--主持人-->
+		<dialog id="Dialog1">
+			<div class="content">
+				<img src="img/女巫.jpg" alt="">
+				<div class="text">
+					<h4>女巫</h4>
+					<p>hello，麦克德夫，请仔细阅读你的秘密任务及已知信息，理清后请用1-2分钟，用你角色的身份和口吻，告诉大家你是谁，你与死者的关系，以及案发当晚你在哪里，在做什么。</p>
+					<button class="closebutton">关闭</button>
+				</div>
+			</div>
+		</dialog>
+		<dialog id="Dialog2">
+			<div class="content">
+				<img src="img/女巫.jpg" alt="">
+				<div class="text">
+					<h4>女巫</h4>
+					<p>麦克德夫，现在开始发放一些线索，让你有更好的头绪。这些线索是解开谜团的关键。请仔细阅读，尝试拼凑出完整的故事。</p>
+					<button class="closebutton">关闭</button>
+				</div>
+			</div>
+		</dialog>
+		<dialog id="Dialog3">
+			<div class="content">
+				<img src="img/女巫.jpg" alt="">
+				<div class="text">
+					<h4>女巫</h4>
+					<p>现在，你已知晓线索，是时候做出最终的决定了。请选出你认为的凶手。你的选择，将决定苏格兰的未来。</p>
+					<button class="closebutton">关闭</button>
+				</div>
+			</div>
+		</dialog>
+		<dialog id="Dialog4">
+			<div class="content">
+				<img src="img/女巫.jpg" alt="">
+				<div class="text">
+					<h4>女巫</h4>
+					<p>剧情已经到达尾声，最后，让我们回顾总结学到的东西</p>
+					<button class="closebutton">关闭</button>
+				</div>
+			</div>
+		</dialog>
+		<div class="game-container">
+			<div class="container1">
+				<!-- 左上： -->
+		        <section class="title">
+		            <h4 style="margin:0">第一幕:</h4>
+		            
+		        </section>
+		        <!-- 正上：-->
+		        <section class="timeplace">
+		        	<span>时间：</span>
+		        	<span id="time">4:00</span>
+		        	<br /><br />
+		        	
+		        	<span>地点：</span>
+		        	<span id="place">麦克白城堡</span>
+		        	
+		        </section>
+		        <!--右上-->
+		        <section class="goal">
+		        	<span>公共目标：</span>
+		        	<span>找出真凶，恢复王国的秩序与正义。质疑麦克白继位的合法性，阻止其加冕。</span>
+		        	
+		        </section>
+			</div>
+        
+        	<div class="container2">
+        		
+		        <!-- 左边：角色信息 -->
+		        <section class="figure-private">
+		            <h3>个人信息</h3>
+		            <div class="private-message">
+		                
+						<div class="inner" style="height:200px">
+							<div class="img p1" style="height:190px">
+								<p>已知信息</p>
+							</div>
+						    <div class="img p2" style="height:190px">
+						    	<p>1.	麦克白和班柯都立下战功，但只有麦克白获得了爵位的封赏。
+								2.	马尔康与邓肯政见不合。戒指是你为长远政治斗争布下的棋子。
+								3.	该侍女是麦克白夫人的心腹，也是你安插的眼线，昨晚是她給侍卫送酒的，你猜测戒指就是那个时候混进去的。
+								4.	女巫的预言：
+								  “万福，麦克白！未来的君王！”
+								“没有一个妇人所生下的人可以伤害麦克白。”
+								“麦克白永远不会被人打败，除非有一天柏南森林会冲着他向邓西嫩高山移动。”
+
+
+
+								</p>
+							</div>
+											
+								
+						</div>
+						<div class="inner" style="height:100px;">
+							<div class="img p1" style="height:90px">
+								<p>秘密任务</p>
+							</div>
+							<div class="img p2" style="height:90px">
+								<p> 隐藏你是“非妇人所生”（剖腹产）的秘密，不能在关键时刻前暴露。
+									隐藏侍女玛丽是你安插在麦克白家中的内应。
+									洗清自己因家族历史而被怀疑的罪名。
+									你与马尔康虽已结盟，但相互猜忌，你要与你的盟友马尔康巩固盟约。
+
+
+								</p>
+								    
+							</div>
+						</div>
+							
+						
+
+		            </div>
+		        </section>
+		        <!--中间：流程-->
+		        
+		        <div class="scene">
+		        	<img src="img/背景图-2.jpg" alt=""> 
+		        </div>
+		        <!--投票-->
+		        
+		        <div class="vote">
+		        	<div class="choice figure1">
+		        		<h4 style="margin-top:80 px;">麦克白夫人</h4>
+		        		<img src="img/麦克白夫人.jpg" alt="" style="width:100%;height:85%;">
+		        	</div>
+		        	<div class="choice figure1">
+		        		<h4 style="margin:10 px;">麦克白</h4>
+		        		<img src="img/麦克白.jpg" alt="" style="width:100%;height:85%;">
+		        	</div>
+		        	<div class="choice figure4">
+		        		<h4 style="margin:10 px;">班柯</h4>
+		        		<img src="img/班柯.jpg" alt="" style="width:100%;height:85%;">
+		        	</div>
+		        	<div class="choice figure3">
+		        		<h4 style="margin:10 px;">马尔康</h4>
+		        		<img src="img/马尔康.jpg" alt="" style="width:100%;height:85%;">
+		        	</div>
+		        </div>
+		        <!--结局1-->
+		        <div class="end1">
+		        	<p>麦克德夫成功劝说马尔康起兵，并亲手杀掉麦克白为家人报仇。麦克白夫人因精神崩溃自杀而死。班柯避免被杀，马尔康成为新王，国家恢复正常秩序。</p>
+		        </div>
+		        <!--结局2-->
+		        <div class="end2">
+		        	<p>马尔康因怕受牵连而流亡英格兰，麦克白加冕，麦克白夫人成为摄政王后，麦克德夫全家被屠杀，你也被暗杀了。</p>
+		        </div>
+		        <!--结局3-->
+		        <div class="end3">
+		        	<p>麦克白加冕，麦克白夫人成为摄政王后，马尔康被麦克白指控而受死刑，麦克德夫全家被屠杀，班柯被暗杀。</p>
+		        </div>
+		        <!--结局4-->
+		        <div class="end4">
+		        	<p>班柯无法受辱而自杀。麦克白加冕，麦克德夫成功劝说马尔康起兵但战败</p>
+		        </div>
+        	</div>
+	        
+            <div class="container3">
+            	
+	
+		        <!-- 底部：线索区域 -->
+		        <section class="clues-area">
+		                         已获得线索(点击图片可放大)
+		            <div class="clues-list">
+		                <!-- 线索将通过JavaScript动态加载 -->
+		                
+		                
+		            </div>             
+		               
+	            </section>
+	            <!-- 右下：显示角色 -->
+		        <section class="character">
+		            <img class="figures" src="img/麦克德夫.jpg" alt="">
+		        </section>
+		        
+            </div>
+	        
+	</body>
+	<script src="js/wangfatiyan.js"></script> 
+</html>

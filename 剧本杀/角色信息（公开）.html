@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色信息（公开）</title>
+    <!-- 引入复古衬线字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        .page-container {
+            width: 100%;
+            height: 100vh;
+            transition: opacity 0.5s ease;
+            padding: 20px;
+            box-sizing: border-box;
+            /* 纯色模拟羊皮纸*/
+            background-color: #f0e6d2;
+            background-image: 
+                radial-gradient(#d9c8a7 1px, transparent 1px),
+                radial-gradient(#d9c8a7 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            -moz-background-opacity: 0.3;
+            /* 复古斜体字体 */
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+        }
+        .right-bottom-next-btn {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 0 2px #0f2447; 
+            border-radius: 8px; 
+            font-size: 22px; /* 按钮字体同步调大 */
+            font-weight: bold;
+            color: #ffffff;
+            -webkit-text-stroke: 1px #0f2447; 
+            background-color: #1a365d;
+            padding: 12px 24px;
+            cursor: pointer;
+            z-index: 999;
+            transition: all 0.3s ease;
+            transform-origin: center;
+            /* 按钮保持正体 */
+            font-style: normal;
+            font-family: 'Playfair Display', serif;
+        }
+        .right-bottom-next-btn:hover {
+            background-color: #0f2447; 
+            border-color: #e0e0e0; 
+            box-shadow: 0 0 0 2px #08182e; 
+            transform: translateY(-2px);
+        }
+        .right-bottom-next-btn.clicked {
+            animation: btnClick 0.5s forwards;
+        }
+        .page-container.fade-out {
+            opacity: 0;
+        }
+        @keyframes btnClick {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.9); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .character-list {
+            margin-top: 30px;
+            line-height: 2; /* 行高同步调整，避免文字拥挤 */
+            font-size: 22px; 
+            color: #332215;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        /* 字体hover效果：文字颜色加深+轻微放大，突出交互感 */
+        .character-list p {
+            transition: all 0.3s ease;
+            padding: 8px 0;
+        }
+        .character-list p:hover {
+            color: #22150d; /* 文字颜色加深，模拟墨色晕染 */
+            transform: scale(1.02); 
+        }
+        .character-list strong {
+            color: #7d4d1d;
+            font-weight: 700;
+            transition: color 0.3s ease;
+        }
+        /* 角色名hover同步变色 */
+        .character-list p:hover strong {
+            color: #633d16;
+        }
+        h1 {
+            color: #7d4d1d;
+            font-size: 42px; 
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(125, 77, 29, 0.3);
+            padding-bottom: 15px;
+            transition: color 0.3s ease;
+        }
+        /* 标题hover效果 */
+        h1:hover {
+            color: #633d16;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container" id="pageContainer">
+        <h1>角色信息（公开）</h1>
+        <div class="character-list">
+            <p><strong>马尔康</strong>：邓肯之长子，王位第一顺位继承人。</p >
+            <p><strong>麦克白</strong>：战功赫赫的英雄，邓肯王的表亲，深得宠信，不久前被赐予“考特爵士”的荣誉。曾与班柯一同平定叛乱。</p >
+            <p><strong>麦克白夫人</strong>：麦克白的妻子，君主的臣妇。</p >
+            <p><strong>麦克德夫</strong>：被宽恕的贵族。</p >
+            <p><strong>班柯</strong>：王国大将，麦克白的战友。曾与麦克白平定叛乱、辅佐邓肯登上王位。</p >
+        </div>
+        <button class="right-bottom-next-btn" id="nextBtn">继续</button>
+    </div>
+    <script>
+        const nextBtn = document.getElementById('nextBtn');
+        const pageContainer = document.getElementById('pageContainer');
+        const targetPage = '角色选择.html'; 
+        nextBtn.addEventListener('click', function() {
+            this.classList.add('clicked');
+            pageContainer.classList.add('fade-out');
+            setTimeout(() => {
+                window.location.href = targetPage;
+            }, 500);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+[
+  {
+    "id": "banquo",
+    "name": "班柯",
+    "avatar": "assets/characters/Banquo.jpg",
+    "public_profile": "苏格兰将军，与麦克白并肩作战，功勋卓著。",
+    "private_background": "你的功勋与麦克白相当，却没有得到同等封赏。你知道女巫关于麦克白和你后代的预言，也曾在关键行动上保持沉默。你必须在麦克白与马尔康之间做出选择。",
+    "goals": [
+      "协助调查邓肯国王遇害案",
+      "防止苏格兰陷入战乱",
+      "在麦克白与马尔康之间做出最终选择"
+    ],
+    "secrets": [
+      "你知道女巫的完整预言。",
+      "你曾默许甚至暗中推动过弑君行动，但不能暴露。",
+      "你真正关心的是自己后代的命运。"
+    ],
+    "initial_information": [
+      "麦克白和你都立下战功，但只有麦克白得到爵位封赏。",
+      "马尔康与邓肯国王政见不合。",
+      "麦克德夫的某位至亲曾经发起叛乱，后来被邓肯赦免。",
+      "女巫预言麦克白将成为国王，你的子孙也将成为国王。"
+    ],
+    "relationships": [
+      {
+        "target_id": "macbeth",
+        "type": "ally_and_rival",
+        "description": "你们是并肩作战的战友，也是封赏和王位问题上的潜在竞争者。"
+      },
+      {
+        "target_id": "malcolm",
+        "type": "political_choice",
+        "description": "马尔康代表王室正统，但你不确定是否应该支持他。"
+      },
+      {
+        "target_id": "lady_macbeth",
+        "type": "dangerous_ally",
+        "description": "她知道你曾经默许行动，因此你必须提防她。"
+      }
+    ],
+    "timeline": [
+      {"time": "21:30", "description": "写下请求与邓肯密会的字条，但请求被拒。", "visibility": "private"},
+      {"time": "23:10", "description": "在走廊遇到神色诡异的麦克白并讨论女巫预言。", "visibility": "private"},
+      {"time": "00:00", "description": "以询问夜巡为由与仆人长谈，客观上为麦克白清场。", "visibility": "private"},
+      {"time": "01:00", "description": "听到异常动静但关紧房门，没有外出查看。", "visibility": "private"}
+    ]
+    
+  },
+  {
+    "id": "macbeth",
+    "name": "麦克白",
+    "avatar": "assets/characters/Macbeth.jpg",
+    "public_profile": "苏格兰战功赫赫的将军，邓肯国王的表亲，刚刚获得考特爵士封号。",
+    "private_background": "女巫预言点燃了你的野心。你得知邓肯可能收回你的兵权后，担心自己失去地位。你与麦克白夫人共同策划了弑君行动，并亲手实施了关键部分。",
+    "goals": [
+      "主张自己是稳定政局和继承王位的最佳人选",
+      "引导众人相信女巫的预言认可你的合法性",
+      "隐藏自己在弑君案中的真实责任",
+      "在游戏结束前保护麦克白夫人"
+    ],
+    "secrets": [
+      "你是弑君行动的实际执行者。",
+      "你知道麦克白夫人参与策划并处理了现场。",
+      "你曾因封赏和兵权问题对邓肯产生强烈不满。"
+    ],
+    "initial_information": [
+      "麦克白和班柯都立下战功，但只有你获得爵位封赏。",
+      "马尔康与邓肯国王政见不合。",
+      "侍女玛丽是麦克白夫人的心腹。",
+      "女巫预言你将成为国王。"
+    ],
+    "relationships": [
+      {
+        "target_id": "lady_macbeth",
+        "type": "spouse_and_co_conspirator",
+        "description": "她推动了你的野心，并参与了弑君计划。"
+      },
+      {
+        "target_id": "banquo",
+        "type": "ally_and_threat",
+        "description": "你们曾是战友，但班柯可能成为揭露真相的关键人物。"
+      },
+      {
+        "target_id": "macduff",
+        "type": "political_opponent",
+        "description": "麦克德夫可能反对你继位，也可能掌握关键证据。"
+      }
+    ],
+    "timeline": [
+      {"time": "23:40", "description": "在东侧回廊徘徊并试探班柯的立场。", "visibility": "private"},
+      {"time": "01:00", "description": "收到夫人的信号后潜入卧室，用匕首刺死邓肯。", "visibility": "private"},
+      {"time": "01:30", "description": "因恐慌将凶器带回，夫人随后返回现场伪造证据。", "visibility": "private"},
+      {"time": "清晨", "description": "与麦克德夫发现尸体，并以复仇之名处决刚苏醒的侍卫甲。", "visibility": "private"}
+    ]
+    
+  },
+  {
+    "id": "lady_macbeth",
+    "name": "麦克白夫人",
+    "avatar": "assets/characters/LadyMacbeth.jpg",
+    "public_profile": "麦克白的夫人，聪明、强势，积极参与宫廷事务。",
+    "private_background": "你认为麦克白过于软弱，因此推动他执行弑君计划。你以安神为名取得罂粟花汁，让侍卫昏迷，并在麦克白带回凶器后返回现场处理血迹和栽赃。",
+    "goals": [
+      "维护麦克白的声誉",
+      "指责散布谣言和制造混乱的人",
+      "推动麦克白获得王位",
+      "隐藏你策划弑君和处理血衣的事实"
+    ],
+    "secrets": [
+      "弑君计划主要由你推动和策划。",
+      "你让侍女玛丽准备并送出使侍卫昏迷的酒。",
+      "你处理过案发现场，并将血迹留在自己的衣物上。",
+      "你必须提防班柯，因为他曾默许行动但立场并不稳定。"
+    ],
+    "initial_information": [
+      "麦克德夫家族与王室有旧怨。",
+      "侍女玛丽是你的心腹。",
+      "班柯知道女巫预言，并可能默许了你们的行动。",
+      "麦克白的野心需要你的推动。"
+    ],
+    "relationships": [
+      {
+        "target_id": "macbeth",
+        "type": "spouse_and_co_conspirator",
+        "description": "你们共同策划弑君，但你比麦克白更加冷静和主动。"
+      },
+      {
+        "target_id": "banquo",
+        "type": "threat",
+        "description": "班柯掌握部分秘密，可能成为计划的隐患。"
+      },
+      {
+        "target_id": "macduff",
+        "type": "hidden_enemy",
+        "description": "麦克德夫可能通过侍女玛丽追查现场真相。"
+      }
+    ],
+    "timeline": [
+      {"time": "22:30", "description": "命玛丽取来罂粟花汁，亲自掺入给侍卫的酒中。", "visibility": "private"},
+      {"time": "01:00", "description": "确认侍卫昏迷，向麦克白发出行动信号。", "visibility": "private"},
+      {"time": "01:30", "description": "将匕首塞入侍卫手中并涂抹血迹，伪造现场。", "visibility": "private"},
+      {"time": "01:40", "description": "回到卧室处理沾血华服，并将其藏入衣箱。", "visibility": "private"}
+    ]
+    
+  },
+  {
+    "id": "macduff",
+    "name": "麦克德夫",
+    "avatar": "assets/characters/Macduff.jpg",
+    "public_profile": "法夫领主，忠于苏格兰，也与王室存在复杂的历史关系。",
+    "private_background": "你的家族曾与王室发生冲突。你已经暗中与马尔康结盟，并把侍女玛丽安插在麦克白夫人身边作为眼线。你知道她曾向侍卫送酒，并怀疑戒指等物品与现场有关。",
+    "goals": [
+      "找出弑君案的真凶",
+      "恢复王国的秩序与正义",
+      "质疑麦克白继位的合法性",
+      "与马尔康巩固盟约"
+    ],
+    "secrets": [
+      "侍女玛丽是你安插在麦克白家中的内应。",
+      "你与马尔康已经秘密结盟。",
+      "你必须隐藏自己‘非妇人所生’的秘密，直到关键时刻。",
+      "你与王室的旧怨可能让其他人怀疑你的动机。"
+    ],
+    "initial_information": [
+      "麦克白和班柯都立下战功，但封赏存在明显差异。",
+      "马尔康与邓肯国王政见不合。",
+      "侍女玛丽是麦克白夫人的心腹，同时也是你的眼线。",
+      "你怀疑戒指等物品可能在送酒时被带入现场。"
+    ],
+    "relationships": [
+      {
+        "target_id": "malcolm",
+        "type": "secret_ally",
+        "description": "你们共同反对麦克白继位，但彼此仍有政治猜疑。"
+      },
+      {
+        "target_id": "lady_macbeth",
+        "type": "hidden_enemy",
+        "description": "你在她身边安插了眼线，试图查明她是否参与谋杀。"
+      },
+      {
+        "target_id": "macbeth",
+        "type": "suspect_and_opponent",
+        "description": "你怀疑麦克白有动机和机会成为真凶。"
+      }
+    ],
+    "timeline": [
+      {"time": "21:30", "description": "指令玛丽将法夫家族戒指放入侍卫甲行囊。", "visibility": "private"},
+      {"time": "21:50", "description": "向马尔康送出半封盟约密信。", "visibility": "private"},
+      {"time": "23:50", "description": "听到侍卫长谈论麦克白行为异常，又听见麦克白与班柯讨论女巫。", "visibility": "private"},
+      {"time": "00:10", "description": "看见马尔康与手持酒瓶的玛丽交谈。", "visibility": "private"},
+      {"time": "清晨", "description": "与麦克白发现邓肯尸体，并看到侍卫甲行囊中的家族戒指。", "visibility": "private"}
+    ]
+    
+  },
+  {
+    "id": "malcolm",
+    "name": "马尔康",
+    "avatar": "assets/characters/Malcolm.jpg",
+    "public_profile": "邓肯国王的长子和合法继承人，年轻但有政治抱负。",
+    "private_background": "你与父亲邓肯在政见上存在分歧。父亲遇害后，你前往英格兰集结军队，准备以柏南森林的树枝为伪装进军苏格兰。你必须洗清自己弑父的嫌疑，并争取班柯等关键人物的支持。",
+    "goals": [
+      "查明父亲死亡的真相",
+      "证明自己是王位的合法继承人",
+      "阻止麦克白利用混乱局势加冕",
+      "寻找可靠盟友的支持"
+    ],
+    "secrets": [
+      "你曾与邓肯国王政见不合，因此可能被怀疑有弑父动机。",
+      "你已经在英格兰集结军队。",
+      "你的军队正以柏南森林的树枝为伪装向邓西嫩进军。",
+      "班柯是决定军方立场的关键人物。"
+    ],
+    "initial_information": [
+      "麦克白和班柯功勋相当，但封赏存在差异。",
+      "麦克德夫家族曾与王室发生冲突。",
+      "邓肯国王遇害后，王位继承陷入混乱。",
+      "女巫预言中包含麦克白和你未来的命运。"
+    ],
+    "relationships": [
+      {
+        "target_id": "macduff",
+        "type": "secret_ally",
+        "description": "麦克德夫已经与你结盟，但你们需要互相确认立场。"
+      },
+      {
+        "target_id": "banquo",
+        "type": "key_supporter",
+        "description": "班柯的军方影响力可能决定王位归属。"
+      },
+      {
+        "target_id": "macbeth",
+        "type": "claimant_and_opponent",
+        "description": "麦克白是王位竞争者，也是你必须调查的主要嫌疑人。"
+      }
+    ],
+    "timeline": [
+      {"time": "21:00", "description": "你的亲卫护送邓肯回到东侧客房。", "visibility": "private"},
+      {"time": "22:00", "description": "收到麦克德夫送来的半封盟约密信。", "visibility": "private"},
+      {"time": "23:00", "description": "在房中写下对父亲强烈不满的日记。", "visibility": "private"},
+      {"time": "00:10", "description": "遇到端着酒杯和酒瓶的玛丽，她称夫人命她把酒送回地窖。", "visibility": "private"},
+      {"time": "清晨", "description": "得知父亲遇害，而你的亲卫被卷入伪造的案发现场。", "visibility": "private"}
+    ]
+    
+  }
+]

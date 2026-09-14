@@ -1,0 +1,59 @@
+[
+  {
+    "id": "rule_guard_was_poisoned",
+    "type": "semantic_reasoning",
+    "evaluation": "agent",
+    "match_mode": "semantic",
+    "description": "玩家推理出酒被下药，目的是迷晕侍卫。自然语言表达出相近含义即可，不要求精确关键词。",
+    "example_phrases": ["酒有问题", "侍卫为什么昏迷", "是不是喝了什么", "罂粟花汁", "有人给侍卫下药"],
+    "allowed_stages": ["investigation", "discussion"],
+    "unlock_clues": ["clue_05", "clue_06"],
+    "delivery": "triggering_player",
+    "private_message": "你的推理触碰到了真相的边缘。在衣箱深处，一件华服上的暗红血迹尚未完全洗去；地窖管理员也终于说出，那晚有人取走了强效罂粟花汁。",
+    "once": true,
+    "priority": 10
+  },
+  {
+    "id": "rule_question_banquo_timeline",
+    "type": "semantic_reasoning",
+    "evaluation": "agent",
+    "match_mode": "semantic",
+    "description": "玩家质疑班柯在子时前后引开仆人的行为或班柯的案发时间线。",
+    "example_phrases": ["班柯为什么找仆人聊天", "班柯的时间线不对", "班柯是不是在清场", "班柯知道东侧客房会出事"],
+    "allowed_stages": ["investigation", "discussion"],
+    "unlock_clues": ["clue_11"],
+    "delivery": "triggering_player",
+    "private_message": "班柯大人，您为何偏偏在那个时间点，用一个如此蹩脚的借口引开仆人？您真的不知道东侧客房正在发生什么吗？",
+    "once": true,
+    "priority": 20
+  },
+  {
+    "id": "rule_macbeth_motive_insufficient",
+    "type": "semantic_reasoning",
+    "evaluation": "agent",
+    "match_mode": "semantic",
+    "description": "玩家质疑麦克白仅仅因为女巫预言就杀人的动机不足。",
+    "example_phrases": ["麦克白的动机不够", "仅凭预言没必要杀人", "麦克白为什么必须现在动手", "麦克白还能得到什么"],
+    "allowed_stages": ["investigation", "discussion"],
+    "unlock_clues": ["clue_12"],
+    "delivery": "triggering_player",
+    "private_message": "麦克白爵士，如果您得知陛下明日就要剥夺您的一切，您还会耐心等待预言实现吗？",
+    "once": true,
+    "priority": 30
+  },
+  {
+    "id": "rule_reveal_macduff_secret",
+    "type": "dm_timing",
+    "evaluation": "agent",
+    "match_mode": "narrative_judgement",
+    "description": "集中讨论后期，当麦克白看似稳操胜券或讨论陷入僵局时，由主持人酌情发放麦克德夫的出生秘密。",
+    "example_phrases": ["真的没有人能伤害麦克白吗", "非妇人所生是什么意思", "谁能破解女巫预言"],
+    "allowed_stages": ["discussion"],
+    "unlock_clues": ["clue_08"],
+    "delivery": "triggering_player",
+    "private_message": "你似乎忽略了一个预言……真的没有人能伤害麦克白吗？",
+    "public_message": null,
+    "once": true,
+    "priority": 40
+  }
+]

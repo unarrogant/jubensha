@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麦克白 · 剧本杀</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- 阶段一：等待房间 -->
+    <div class="container1">
+        <div class="header">
+            <p>房间: <span id="roomName"></span>  ·  玩家: <span id="userName"></span></p>
+        </div>
+        <div class="content">
+            <div class="sidebar">
+                <div class="user-list">
+                    <h3>在线玩家</h3>
+                    <div id="usersContainer"></div>
+                </div>
+                <div class="status-section">
+                    <div class="status-message" id="statusMessage">准备连接...</div>
+                    <div id="connectionStatus" class="connection-status connected">已连接</div>
+                </div>
+                <div class="controls">
+                    <button class="startbtn">开始游戏</button>
+                    <button id="muteBtn" class="mute-btn">静音</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 阶段二：角色选择 -->
+    <div class="container2">
+        <div class="selection">
+            <div class="inner">
+                <img class="figure" src="/img/Malcolm.jpg" alt="马尔康">
+                <button class="MalcolmSelect selectbtn">选择角色</button>
+            </div>
+            <div class="inner">
+                <img class="figure" src="/img/Macduff.jpg" alt="麦克德夫">
+                <button class="MacduffSelect selectbtn">选择角色</button>
+            </div>
+            <div class="inner">
+                <img class="figure" src="/img/Banquo.jpg" alt="班柯">
+                <button class="BanquoSelect selectbtn">选择角色</button>
+            </div>
+        </div>
+        <div class="selection">
+            <div class="inner">
+                <img class="figure" src="/img/LadyMacbeth.jpg" alt="麦克白夫人">
+                <button class="LadyMacbethSelect selectbtn">选择角色</button>
+            </div>
+            <div class="inner">
+                <img class="figure" src="/img/Macbeth.jpg" alt="麦克白">
+                <button class="MacbethSelect selectbtn">选择角色</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 阶段三：游戏面板 -->
+    <div class="container3">
+        <div class="zone1">
+            <section class="title">
+                <h4>第一幕</h4>
+            </section>
+            <section class="timeplace">
+                <span>时间：</span>
+                <span id="time">4:00</span>
+                <span>地点：</span>
+                <span id="place">麦克白城堡</span>
+            </section>
+            <section class="goal">
+                <span>公共目标：</span>
+            </section>
+        </div>
+
+        <div class="zone2">
+            <!-- 左侧：个人信息卡片 -->
+            <section class="figure-private">
+                <h3>个人信息</h3>
+                <div class="private-message">
+                    <div class="message">
+                        <div class="img p1">已知信息</div>
+                        <div class="img p2 inform"></div>
+                    </div>
+                    <div class="message">
+                        <div class="img p1">秘密任务</div>
+                        <div class="img p2 secret"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 中间：对话 & 投票区 -->
+            <div class="conversation">
+                <div class="users-left">
+                    <div id="user1">
+                        <audio id="remoteAudio1" autoplay></audio>
+                    </div>
+                    <div id="user2">
+                        <audio id="remoteAudio2" autoplay></audio>
+                    </div>
+                </div>
+                <div class="process">
+                    <div class="chat-header">
+                        <img id="host" src="/img/host.jpg" alt="主持人">
+                        <span class="dm-name">DM · 麦克白城堡</span>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-msg dm">
+                            <div class="msg-bubble">正在唤醒AI主持人...</div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" class="chat-input" placeholder="输入你想对DM说的话..." maxlength="500">
+                        <button id="chatSend" class="chat-send-btn">发送</button>
+                    </div>
+                </div>
+                <div class="users-right">
+                    <div id="user3">
+                        <audio id="remoteAudio3" autoplay></audio>
+                    </div>
+                    <div id="user4">
+                        <audio id="remoteAudio4" autoplay></audio>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="zone3">
+            <section class="clues-area">
+                已获得线索（点击图片可放大）
+                <div class="clues-list"></div>
+            </section>
+            <section class="character">
+                <audio id="localAudio" autoplay></audio>
+            </section>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/room.js"></script>
+</body>
+</html>

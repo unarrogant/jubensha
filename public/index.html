@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jubensha</title>
+    <link href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="welcome-title">Welcome to Macbeth's castle</h1>
+        <div class="form">
+            <input type="text" class="forminput" placeholder="账号">
+            <input type="password" class="forminput" placeholder="密码">
+            <button class="btn-login">登录游戏</button>
+            <button class="btn-register" >前往注册</button>
+            <button class="btn-story">关于<br>我们</button>
+        </div>
+    </div>
+    <div class="register-panel" style="display: none;">
+      <h2>账号注册</h2>
+      <input type="text" class="reg-input" placeholder="设置账号（3-12位）">
+      <input type="password" class="reg-input" placeholder="设置密码（6-16位）">
+      <input type="password" class="reg-input" placeholder="确认密码">
+      <div class="reg-btn-group">
+        <button class="btn-reg-confirm">完成注册</button>
+        <button class="btn-reg-cancel">取消</button>
+      </div>
+    </div>
+<!-- 新增遮罩层（默认隐藏，用于凸显注册面板） -->
+ <div class="mask" style="display: none;"></div> 
+      
+    <ul class="bg-squares">
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+    </ul>   
+    <script>
+  // 页面加载完成后执行
+  window.onload = function() {
+  const titleElement = document.querySelector('.welcome-title');
+  const titleText = titleElement.textContent;
+  const words = titleText.split(' '); // 按空格拆分单词
+  
+  titleElement.innerHTML = '';
+  words.forEach((word, index) => {
+    const wordSpan = document.createElement('span');
+    wordSpan.className = 'word-span';
+    wordSpan.textContent = word + ' '; // 保留单词间空格
+    // 每个单词延迟0.3s出场，形成逐个出现效果
+    wordSpan.style.animationDelay = `${index * 0.3}s`;
+    titleElement.appendChild(wordSpan);
+    });
+    };
+    </script>。<!--逐字出现动画-->
+    <link rel="stylesheet" href="/css/login.css">
+    <script src="/js/denglu.js"></script>
+    <script src="/js/跳到团队介绍.js"></script>
+</body>
+</html>

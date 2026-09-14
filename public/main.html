@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音聊天室 - 自动发现</title>
+    <link href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "楷体", "KaiTi", "Microsoft YaHei", serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: radial-gradient(ellipse at center, #1a0f0a 0%, #0d0505 70%);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 背景纹理 */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(139, 69, 19, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(139, 0, 0, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(201, 169, 110, 0.04) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 漂浮粒子 */
+        .particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .particle {
+            position: absolute;
+            background: rgba(201, 169, 110, 0.15);
+            border-radius: 50%;
+            animation: floatUp linear infinite;
+        }
+        @keyframes floatUp {
+            0%   { transform: translateY(0) scale(1); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translateY(-100vh) scale(0.3); opacity: 0; }
+        }
+
+        /* 主容器 */
+        .container {
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(180deg, rgba(30, 18, 12, 0.95) 0%, rgba(20, 10, 5, 0.98) 100%);
+            border: 1px solid rgba(201, 169, 110, 0.3);
+            border-radius: 4px;
+            box-shadow:
+                0 0 60px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(201, 169, 110, 0.1);
+            width: 100%;
+            max-width: 480px;
+            padding: 40px 36px;
+        }
+
+        /* 顶部装饰线 */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 40px; right: 40px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.6), transparent);
+        }
+        .container::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 40px; right: 40px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.3), transparent);
+        }
+
+        /* 标题 */
+        .title-group { text-align: center; margin-bottom: 36px; }
+        .title-icon { font-size: 48px; margin-bottom: 8px; display: block; }
+        .title {
+            font-family: 'Uncial Antiqua', 'Garamond', serif;
+            font-size: 36px;
+            color: #c9a96e;
+            letter-spacing: 3px;
+            margin-bottom: 6px;
+            text-shadow: 0 0 20px rgba(201, 169, 110, 0.3);
+        }
+        .subtitle {
+            color: rgba(200, 180, 150, 0.6);
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+
+        /* 分隔线 */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.3), transparent);
+            margin-bottom: 28px;
+        }
+
+        /* 表单 */
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            color: rgba(200, 180, 150, 0.8);
+            font-size: 13px;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 13px 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(201, 169, 110, 0.25);
+            border-radius: 2px;
+            color: #e8dcc8;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s;
+            outline: none;
+        }
+        .form-group input:focus {
+            border-color: rgba(201, 169, 110, 0.6);
+            box-shadow: 0 0 12px rgba(201, 169, 110, 0.1);
+            background: rgba(0, 0, 0, 0.6);
+        }
+        .form-group input::placeholder {
+            color: rgba(200, 180, 150, 0.35);
+        }
+
+        /* 按钮 */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid rgba(201, 169, 110, 0.4);
+            border-radius: 2px;
+            font-size: 15px;
+            font-family: inherit;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: linear-gradient(180deg, rgba(201, 169, 110, 0.2) 0%, rgba(139, 90, 43, 0.3) 100%);
+            color: #c9a96e;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(180deg, rgba(201, 169, 110, 0.35) 0%, rgba(139, 90, 43, 0.45) 100%);
+            border-color: rgba(201, 169, 110, 0.7);
+            box-shadow: 0 0 20px rgba(201, 169, 110, 0.15);
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: transparent;
+            color: rgba(200, 180, 150, 0.7);
+            border-color: rgba(200, 180, 150, 0.2);
+        }
+        .btn-secondary:hover {
+            background: rgba(200, 180, 150, 0.08);
+            border-color: rgba(200, 180, 150, 0.4);
+            color: rgba(200, 180, 150, 0.9);
+        }
+
+        /* 状态消息 */
+        .status {
+            padding: 12px 16px;
+            border-radius: 2px;
+            margin: 16px 0;
+            text-align: center;
+            font-size: 13px;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .status.success {
+            background: rgba(40, 167, 69, 0.12);
+            color: #90d4a0;
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        .status.error {
+            background: rgba(220, 53, 69, 0.12);
+            color: #e89090;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        .status.info {
+            background: rgba(201, 169, 110, 0.08);
+            color: rgba(200, 180, 150, 0.8);
+            border: 1px solid rgba(201, 169, 110, 0.15);
+        }
+        .hidden { display: none; }
+
+        /* 房间列表 */
+        .rooms-section { margin-top: 24px; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .section-header h3 {
+            color: rgba(200, 180, 150, 0.8);
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: #c9a96e;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            letter-spacing: 1px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .refresh-btn:hover { opacity: 1; }
+
+        .rooms-list {
+            border: 1px solid rgba(201, 169, 110, 0.15);
+            border-radius: 2px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .rooms-list::-webkit-scrollbar { width: 4px; }
+        .rooms-list::-webkit-scrollbar-track { background: transparent; }
+        .rooms-list::-webkit-scrollbar-thumb {
+            background: rgba(201, 169, 110, 0.2);
+            border-radius: 2px;
+        }
+
+        .room-item {
+            padding: 16px 18px;
+            border-bottom: 1px solid rgba(201, 169, 110, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .room-item:last-child { border-bottom: none; }
+        .room-item:hover { background: rgba(201, 169, 110, 0.04); }
+        .room-name {
+            font-weight: bold;
+            color: #e8dcc8;
+            font-size: 15px;
+            margin-bottom: 3px;
+        }
+        .room-creator {
+            font-size: 12px;
+            color: rgba(200, 180, 150, 0.5);
+        }
+        .join-btn {
+            background: linear-gradient(180deg, rgba(139, 0, 0, 0.4) 0%, rgba(100, 0, 0, 0.5) 100%);
+            color: #e8a0a0;
+            border: 1px solid rgba(139, 0, 0, 0.4);
+            padding: 9px 20px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+        .join-btn:hover {
+            background: linear-gradient(180deg, rgba(180, 20, 20, 0.5) 0%, rgba(139, 0, 0, 0.6) 100%);
+            border-color: rgba(200, 50, 50, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(200, 180, 150, 0.5);
+            font-size: 14px;
+        }
+        .empty-state .icon { font-size: 36px; margin-bottom: 10px; display: block; }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .back-link a {
+            color: rgba(200, 180, 150, 0.45);
+            text-decoration: none;
+            font-size: 13px;
+            letter-spacing: 1px;
+            transition: color 0.2s;
+        }
+        .back-link a:hover { color: #c9a96e; }
+    </style>
+</head>
+<body>
+    
+    <div class="particles" id="particles"></div>
+
+    <div class="container">
+        <div class="title-group">
+            <span class="title-icon"></span>
+            <h1 class="title">Macbeth's Castle</h1>
+            <p class="subtitle">创 建 或 加 入 房 间</p>
+        </div>
+        <div class="divider"></div>
+
+        <div class="form-group">
+            <label for="username">玩家名称</label>
+            <input type="text" id="username" placeholder="请输入你的名字" required maxlength="12">
+        </div>
+
+        <div class="form-group">
+            <label for="roomName">房间名称</label>
+            <input type="text" id="roomName" placeholder="输入名称创建新房间" maxlength="20">
+        </div>
+
+        <button id="createRoom" class="btn btn-primary">创建房间</button>
+        <button id="discoverRooms" class="btn btn-secondary">发现房间</button>
+
+        <div id="status" class="status hidden"></div>
+
+        <div class="rooms-section">
+            <div class="section-header">
+                <h3>发现的房间</h3>
+                <button id="refreshRooms" class="refresh-btn" style="display:none;">刷新</button>
+            </div>
+            <div id="roomsList" class="rooms-list hidden">
+                <div id="roomsContainer"></div>
+            </div>
+        </div>
+
+        <div class="back-link">
+            <a href="/background.html">返回上页</a>
+        </div>
+    </div>
+
+    <script>
+        // 生成漂浮粒子
+        (function(){
+            const container = document.getElementById('particles');
+            for(let i=0; i<20; i++){
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random()*4+2;
+                p.style.width = size+'px';
+                p.style.height = size+'px';
+                p.style.left = Math.random()*100+'%';
+                p.style.bottom = -(Math.random()*100+10)+'px';
+                p.style.animationDuration = (Math.random()*15+10)+'s';
+                p.style.animationDelay = (Math.random()*10)+'s';
+                container.appendChild(p);
+            }
+        })();
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "waiting",
+    "name": "等待玩家",
+    "order": 1,
+    "duration_seconds": 0,
+    "description": "房主创建房间，玩家加入并等待所有角色准备完成。",
+    "allowed_actions": ["join_room", "select_character", "ready"],
+    "next_stage": "role_selection",
+    "manual_transition": true,
+    "agent_instructions": "不要开始主持剧情，只确认玩家人数和准备状态。"
+  },
+  {
+    "id": "role_selection",
+    "name": "角色选择",
+    "order": 2,
+    "duration_seconds": 0,
+    "description": "五名玩家分别选择一个角色，角色不能重复。",
+    "allowed_actions": ["select_character", "view_public_profile", "ready"],
+    "next_stage": "intro",
+    "manual_transition": true,
+    "agent_instructions": "确认每名玩家都已选定角色，不得泄露角色的私密信息。"
+  },
+  {
+    "id": "intro",
+    "event_stage": "INTRO",
+    "name": "角色自我介绍",
+    "order": 3,
+    "duration_seconds": 120,
+    "description": "主持人用沉浸式开场白介绍案情，玩家依次完成角色自我介绍。",
+    "fallback_message": "夜色笼罩着麦克白城堡，邓肯国王却再也没能从客房醒来。王冠、预言与各自隐瞒的秘密，将五位在场者困在同一场疑云之中。请麦克白、麦克白夫人、班柯、马尔康和麦克德夫依次介绍自己的公开身份；不要透露角色卡中的秘密内容。",
+    "allowed_actions": ["speak", "view_character_card", "private_character_query"],
+    "forbidden_actions": ["enter_location", "inspect_object", "submit_reasoning", "send_clue"],
+    "initial_clue_release": null,
+    "next_stage": "investigation",
+    "manual_transition": false,
+    "agent_instructions": "发送 STAGE_CHANGE(INTRO) 和 TIMER(120)。用四至六句沉浸式主持词回顾案情，引导玩家按麦克白、麦克白夫人、班柯、马尔康、麦克德夫的顺序自我介绍。不得发放任何线索。"
+  },
+  {
+    "id": "investigation",
+    "event_stage": "INVESTIGATION",
+    "name": "自由调查搜证",
+    "order": 4,
+    "duration_seconds": 300,
+    "description": "玩家在唯一一轮搜证中选择地点、检查物品，也可以提交推理解锁闯关线索。",
+    "allowed_actions": ["speak", "view_clue", "enter_location", "inspect_object", "share_clue", "submit_reasoning", "private_character_query"],
+    "forbidden_actions": ["vote"],
+    "initial_clue_release": {
+      "mode": "random_without_replacement",
+      "min_count": 1,
+      "max_count": 1,
+      "pool": ["clue_01", "clue_02", "clue_03", "clue_04", "clue_09", "clue_10"],
+      "target": "all",
+      "avoid_same_opening_between_sessions": true
+    },
+    "next_stage": "discussion",
+    "manual_transition": false,
+    "agent_instructions": "发送 STAGE_CHANGE(INVESTIGATION) 和 TIMER(300)，先向所有玩家随机发放一张不属于地点搜证、也不属于推理解锁的一级线索卡。公共主持词用自然叙述提示案发现场、麦克白房间、马尔康房间、班柯房间和麦克德夫房间可以搜查，并提醒玩家可以向主持人提交推理。具体玩家去了哪里、检查了什么、发现了什么只能通过 PRIVATE_MESSAGE 告知本人。"
+  },
+  {
+    "id": "discussion",
+    "event_stage": "DISCUSSION",
+    "name": "集中讨论推理",
+    "order": 5,
+    "duration_seconds": 180,
+    "description": "玩家分享已获得的线索并集中推理，不能再搜查地点。",
+    "allowed_actions": ["speak", "view_clue", "share_clue", "submit_reasoning", "accuse", "private_character_query"],
+    "forbidden_actions": ["enter_location", "inspect_object", "send_level_one_clue", "vote"],
+    "initial_clue_release": null,
+    "next_stage": "voting",
+    "manual_transition": false,
+    "agent_instructions": "发送 STAGE_CHANGE(DISCUSSION) 和 TIMER(180)。禁止地点搜查和一级线索发放；玩家满足推理条件时仍可私密发放 clue 5、6、11、12，讨论后期可酌情广播 clue 8。"
+  },
+  {
+    "id": "voting",
+    "event_stage": "VOTING",
+    "name": "投票指认凶手",
+    "order": 6,
+    "duration_seconds": 60,
+    "description": "每名玩家投出唯一一票，系统统计票型。",
+    "allowed_actions": ["vote", "private_character_query"],
+    "forbidden_actions": ["enter_location", "inspect_object", "submit_reasoning", "send_clue"],
+    "initial_clue_release": null,
+    "next_stage": "ending",
+    "manual_transition": false,
+    "agent_instructions": "发送 STAGE_CHANGE(VOTING) 和 START_VOTE(60)。不得搜查、推理或发放任何新线索。"
+  },
+  {
+    "id": "ending",
+    "event_stage": "ENDING",
+    "name": "揭示真相",
+    "order": 7,
+    "duration_seconds": 0,
+    "description": "主持人根据投票结果还原完整时间线，公布秘密、真相和对应结局。",
+    "allowed_actions": ["view_clue", "speak"],
+    "forbidden_actions": ["enter_location", "inspect_object", "submit_reasoning", "send_clue", "vote"],
+    "initial_clue_release": null,
+    "next_stage": null,
+    "manual_transition": true,
+    "agent_instructions": "发送 STAGE_CHANGE(ENDING) 和 GAME_END。按麦克白的动机、麦克白夫人的策划、班柯的默许、麦克德夫的秘密和女巫预言依次复盘。"
+  }
+]

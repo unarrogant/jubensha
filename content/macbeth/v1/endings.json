@@ -1,0 +1,114 @@
+[
+  {
+    "id": "ending_banquo_accused",
+    "trigger": {
+      "type": "vote",
+      "suspect_id": "banquo"
+    },
+    "title": "沉默者的末路",
+    "winner": "macbeth",
+    "narrative": "班柯无法承受众人的指控与屈辱，最终选择自杀。麦克白趁乱加冕，麦克德夫试图劝说马尔康起兵，却最终战败。",
+    "truth_reveal": [
+      "班柯知道女巫预言。",
+      "班柯在案发前与仆人长时间交谈，客观上为麦克白清场。",
+      "班柯听到异常动静后选择留在房中，没有阻止谋杀。"
+    ],
+    "character_fates": {
+      "banquo": "被指认为真凶并自杀",
+      "macbeth": "加冕为王",
+      "lady_macbeth": "继续掌握宫廷权力",
+      "macduff": "起兵失败",
+      "malcolm": "失去夺回王位的机会"
+    }
+  },
+  {
+    "id": "ending_macbeth_accused",
+    "trigger": {
+      "type": "vote",
+      "suspect_id": "macbeth"
+    },
+    "title": "血色王冠",
+    "winner": "macduff",
+    "narrative": "麦克德夫揭开了麦克白的野心与弑君真相。他劝说马尔康起兵，并亲手杀死麦克白为家人和王国复仇。麦克白夫人因精神崩溃自杀，马尔康成为新王。",
+    "truth_reveal": [
+      "邓肯密诏暴露了麦克白失去兵权的现实动机。",
+      "麦克白亲手用涂毒的匕首刺死了邓肯。",
+      "麦克白夫人负责下药、发出行动信号并伪造侍卫行凶现场。",
+      "班柯知道部分计划，却选择保持沉默。"
+    ],
+    "character_fates": {
+      "banquo": "暂时避免被杀，但必须面对自己的沉默",
+      "macbeth": "被麦克德夫杀死",
+      "lady_macbeth": "因精神崩溃自杀",
+      "macduff": "成为揭露真相和复仇的关键人物",
+      "malcolm": "成为苏格兰新王"
+    }
+  },
+  {
+    "id": "ending_lady_macbeth_accused",
+    "trigger": {
+      "type": "vote",
+      "suspect_id": "lady_macbeth"
+    },
+    "title": "操纵王冠的人",
+    "winner": "macduff",
+    "narrative": "众人认定麦克白夫人才是弑君计划的策划者。真相最终指向麦克白夫妇共同的罪行，麦克德夫杀死麦克白，麦克白夫人因精神崩溃自杀，马尔康继承王位。",
+    "truth_reveal": [
+      "麦克白夫人以安神为名取得罂粟花汁。",
+      "她亲自将毒药掺入侍卫的酒中。",
+      "她将匕首塞回侍卫手中，并把血抹在侍卫脸上。",
+      "她的华服袖口留下了无法洗净的血迹。"
+    ],
+    "character_fates": {
+      "banquo": "避免被杀，但仍背负默许行动的秘密",
+      "macbeth": "被麦克德夫杀死",
+      "lady_macbeth": "真相败露后精神崩溃自杀",
+      "macduff": "协助马尔康恢复王国秩序",
+      "malcolm": "成为苏格兰新王"
+    }
+  },
+  {
+    "id": "ending_macduff_accused",
+    "trigger": {
+      "type": "vote",
+      "suspect_id": "macduff"
+    },
+    "title": "被旧怨吞噬的王国",
+    "winner": "macbeth",
+    "narrative": "麦克德夫家族与王室的旧怨被视为最强动机。马尔康担心受到牵连而流亡英格兰，麦克白顺势加冕，麦克白夫人成为摄政王后。麦克德夫全家被屠杀，班柯也遭到暗杀。",
+    "truth_reveal": [
+      "麦克德夫确实与马尔康秘密结盟，但不是弑君者。",
+      "侍女玛丽是麦克德夫安插在麦克白夫人身边的眼线。",
+      "法夫家族戒指是麦克德夫提前放入侍卫行囊的政治棋子。"
+    ],
+    "character_fates": {
+      "banquo": "被麦克白势力暗杀",
+      "macbeth": "加冕为王",
+      "lady_macbeth": "成为摄政王后",
+      "macduff": "被指认为真凶，家族遭到屠杀",
+      "malcolm": "流亡英格兰"
+    }
+  },
+  {
+    "id": "ending_malcolm_accused",
+    "trigger": {
+      "type": "vote",
+      "suspect_id": "malcolm"
+    },
+    "title": "失去继承权的王子",
+    "winner": "macbeth",
+    "narrative": "马尔康与父亲的矛盾、他的亲卫卷入案发现场，使众人相信他有弑父动机。麦克白加冕，麦克白夫人成为摄政王后，马尔康被麦克白指控并处死，麦克德夫全家被屠杀，班柯也遭到暗杀。",
+    "truth_reveal": [
+      "马尔康确实与邓肯存在政见冲突，但他正在英格兰集结军队。",
+      "马尔康的亲卫被麦克白夫人利用来伪造现场。",
+      "马尔康是迷药事件的直接目击者，却没有足够证据阻止谋杀。"
+    ],
+    "character_fates": {
+      "banquo": "被麦克白势力暗杀",
+      "macbeth": "加冕为王",
+      "lady_macbeth": "成为摄政王后",
+      "macduff": "家族遭到屠杀",
+      "malcolm": "被麦克白指控并处死"
+    }
+  }
+]

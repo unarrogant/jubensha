@@ -1,0 +1,21 @@
+{
+    "name": "voicechat",
+    "version": "1.0.0",
+    "description": "局域网语音聊天系统",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js"
+    },
+    "dependencies": {
+        "bonjour": "^3.5.0",
+        "express": "^4.21.2",
+        "socket.io": "^4.8.1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC"
+}

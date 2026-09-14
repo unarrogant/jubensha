@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麦克白 · 游戏背景</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: radial-gradient(ellipse at center, #1a0f0a 0%, #0d0505 70%);
+            font-family: "楷体", "KaiTi", "Microsoft YaHei", serif;
+            font-size: 18px;
+            padding: 40px 20px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            color: #e8dcc8;
+        }
+        #content-wrapper {
+            width: 100%;
+            max-width: 760px;
+            position: relative;
+        }
+        #text {
+            color: #c8b496;
+            line-height: 2;
+            margin-bottom: 80px;
+            text-align: center;
+            white-space: pre-line;
+            background: linear-gradient(180deg, rgba(30, 18, 12, 0.9) 0%, rgba(20, 10, 5, 0.95) 100%);
+            border: 1px solid rgba(201, 169, 110, 0.2);
+            border-radius: 4px;
+            padding: 36px 32px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+        }
+        #text::first-line {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 30px 0;
+            display: block;
+            color: #c9a96e;
+            letter-spacing: 2px;
+        }
+        #text::after {
+            content: "|";
+            color: #8b0000;
+            animation: blink 0.8s infinite alternate;
+            margin-left: 3px;
+        }
+        @keyframes blink {
+            from { opacity: 1; }
+            to   { opacity: 0; }
+        }
+
+        .bottom-jump-btn {
+            display: block;
+            opacity: 0;
+            transition: all 0.4s ease;
+            position: fixed;
+            right: 30px; bottom: 30px;
+            padding: 12px 28px;
+            background: linear-gradient(180deg, rgba(139, 0, 0, 0.5) 0%, rgba(80, 0, 0, 0.6) 100%);
+            color: #e8a0a0;
+            border: 1px solid rgba(200, 60, 60, 0.4);
+            border-radius: 2px;
+            font-size: 16px;
+            font-family: inherit;
+            letter-spacing: 2px;
+            cursor: pointer;
+            z-index: 999;
+            transition: all 0.3s;
+        }
+        .bottom-jump-btn:hover {
+            background: linear-gradient(180deg, rgba(180, 20, 20, 0.6) 0%, rgba(120, 10, 10, 0.7) 100%);
+            border-color: rgba(220, 80, 80, 0.6);
+            box-shadow: 0 0 20px rgba(139, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+        .bottom-jump-btn.clicked {
+            animation: btnClick 0.4s forwards;
+        }
+        @keyframes btnClick {
+            0%   { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="content-wrapper">
+        <div id="text"></div>
+    </div>
+    <button class="bottom-jump-btn">继 续</button>
+    <script>
+        var text = '游戏背景\n'+
+                   '苏格兰国王邓肯在他最信任的将军——麦克白的城堡中离奇死亡。是突发恶疾，还是谋杀？在麦克白加冕前夜，五位决定王国命运的关键人物齐聚一堂。你们必须找出真相，决定王冠的归属。\n\n'+
+                   '核心规则\n'+
+                   '1. 沉浸于你的角色。\n2. 尽力完成你的公开目标和秘密任务。\n3. 你可以说谎，但必须基于你的角色动机。\n\n'+
+                   '案件详情\n'+
+                   '- 死者：邓肯国王\n- 案发现场：邓肯王被匕首刺穿心脏，且匕首上涂有罕见的蛇毒，导致伤口发黑、血液无法凝固。\n- 死亡时间：前夜子时至丑时（约23:00 - 1:00）\n- 死亡地点：麦克白城堡客房的床上。';
+
+        var t = document.getElementById("text");
+        var loginBtn = document.querySelector('.bottom-jump-btn');
+        var index = 0;
+        function Writer() {
+            if (index < text.length) {
+                t.innerHTML += text[index++];
+                setTimeout(Writer, 120);
+            } else {
+                t.style.animation = "none";
+                const cursor = document.createElement('style');
+                cursor.textContent = "#text::after { display: none; }";
+                document.head.appendChild(cursor);
+                loginBtn.style.opacity = "1";
+            }
+        }
+        Writer();
+        loginBtn.addEventListener('click', function() {
+            this.classList.add('clicked');
+            setTimeout(function(){
+                window.location.href = '/main.html';
+            }, 400);
+        });
+    </script>
+</body>
+</html>

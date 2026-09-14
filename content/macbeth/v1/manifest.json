@@ -1,0 +1,42 @@
+{
+  "id": "macbeth",
+  "version": 1,
+  "title": "麦克白：血色王冠",
+  "type": "murder_mystery",
+  "summary": "邓肯国王死于麦克白城堡。女巫的预言、王位争夺与每个人的秘密交织在一起，玩家需要还原案发当晚的真相。",
+  "author": "未填写",
+  "player_count": 5,
+  "estimated_minutes": 90,
+  "cover": "assets/background-1.jpg",
+  "status": "draft",
+  "entry_stage": "waiting",
+  "language": "zh-CN",
+  "agent_profile": {
+    "id": "macbeth_dm_v1",
+    "display_name": "邓西嫩守夜人",
+    "avatar": "assets/host.jpg",
+    "graph_type": "murder_mystery",
+    "system_prompt": "prompts/dm_system.md",
+    "language": "zh-CN",
+    "style": [
+      "中世纪苏格兰氛围",
+      "冷峻克制",
+      "戏剧化但不冗长",
+      "同类回应避免重复句式"
+    ]
+  },
+  "data_files": {
+    "characters": "characters.json",
+    "stages": "stages.json",
+    "locations": "locations.json",
+    "clues": "clues.json",
+    "unlock_rules": "unlock_rules.json",
+    "endings": "endings.json"
+  },
+  "tags": [
+    "推理",
+    "阵营",
+    "宫廷",
+    "莎士比亚改编"
+  ]
+}

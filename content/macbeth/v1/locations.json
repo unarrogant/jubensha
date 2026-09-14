@@ -1,0 +1,284 @@
+{
+  "stage_id": "investigation",
+  "location_list_visible": true,
+  "object_options_visible": false,
+  "discovery_delivery": "searcher",
+  "share_clue_allowed": true,
+  "clue_once_per_session": true,
+  "visibility_rules": {
+    "public_message_on_enter": "有人离开了大厅，脚步声沿走廊远去。",
+    "public_message_on_inspect": "",
+    "environment_channel": "PRIVATE_MESSAGE",
+    "inspection_channel": "PRIVATE_MESSAGE",
+    "never_reveal_player_action_publicly": true
+  },
+  "instructions": "玩家先从公开地点列表选择地点。进入后，主持人通过私密消息描述环境，但不直接列出可检查物品。玩家主动说出要检查的物品；命中隐藏点时向该玩家发放线索，检查错误则只回复没有更多发现。",
+  "locations": [
+    {
+      "id": "crime_scene",
+      "name": "案发现场",
+      "public_summary": "邓肯国王遇害的东侧客房，血迹和被扰乱的陈设仍保留着昨夜的痕迹。",
+      "entry_narration": "地毯上深色血渍拖向门口，壁炉灰烬尚温，边缘似有金属微光。一只酒杯翻倒在桌脚旁，窗帘被利器划开一道长口。",
+      "searchable_objects": [
+        {
+          "id": "fireplace_ashes",
+          "name": "壁炉灰烬",
+          "aliases": ["壁炉", "灰烬", "炉灰", "壁炉边缘"],
+          "result": {
+            "type": "clue",
+            "clue_id": "clue_10",
+            "message": "你拨开尚温的灰烬，一枚银戒指出现在掌心，内圈刻着马尔康亲卫的徽记。"
+          }
+        },
+        {
+          "id": "blood_stain",
+          "name": "地毯血迹",
+          "aliases": ["血迹", "地毯", "拖痕"],
+          "result": {
+            "type": "empty",
+            "message": "那不过是搏斗留下的痕迹，并无更多线索。"
+          }
+        },
+        {
+          "id": "wine_glass",
+          "name": "翻倒的酒杯",
+          "aliases": ["酒杯", "杯子", "药酒"],
+          "result": {
+            "type": "empty",
+            "message": "杯中只是寻常药酒，大概是邓肯王睡前所饮。"
+          }
+        },
+        {
+          "id": "curtain",
+          "name": "破损窗帘",
+          "aliases": ["窗帘", "划痕", "窗口"],
+          "result": {
+            "type": "empty",
+            "message": "那不过是搏斗留下的痕迹，并无更多线索。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "macbeth_room",
+      "name": "麦克白房间",
+      "public_summary": "麦克白的私人房间，书桌、盔甲和上锁铁箱都显得格外沉默。",
+      "entry_narration": "《苏格兰编年史》摊在书桌上，书脊磨损。墙角盔甲内侧刻着模糊小字，床底铁箱锁头崭新，墨水瓶下还压着一封未写完的家信。",
+      "searchable_objects": [
+        {
+          "id": "chronicle",
+          "name": "苏格兰编年史",
+          "aliases": ["编年史", "书", "书页", "书桌上的书"],
+          "result": {
+            "type": "clue",
+            "clue_id": "clue_02",
+            "message": "书页之间夹着一张对折信笺，正是麦克白写给夫人的密信。"
+          }
+        },
+        {
+          "id": "armor",
+          "name": "墙角盔甲",
+          "aliases": ["盔甲", "铠甲", "墙角"],
+          "result": {
+            "type": "empty",
+            "message": "那是军中常见的铭文，记录了某场战役的日期。"
+          }
+        },
+        {
+          "id": "iron_chest",
+          "name": "床底铁箱",
+          "aliases": ["铁箱", "箱子", "床底"],
+          "result": {
+            "type": "empty",
+            "message": "箱中装的是军饷银币，并无特别。"
+          }
+        },
+        {
+          "id": "unfinished_letter",
+          "name": "未写完的家信",
+          "aliases": ["家信", "墨水瓶", "信"],
+          "result": {
+            "type": "empty",
+            "message": "只是寻常家书，嘱咐夫人备好晚宴。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "malcolm_room",
+      "name": "马尔康房间",
+      "public_summary": "王储临时居住的房间，英格兰地图与散乱纸张透露出紧张的政治气息。",
+      "entry_narration": "衣箱里一件深绿斗篷叠得齐整，触感异常硬挺。废纸篓里揉皱的羊皮纸上写着‘柏南’，床头抽屉中留有一枚断裂蜡封，墙上的英格兰地图折痕密布。",
+      "searchable_objects": [
+        {
+          "id": "cloak_lining",
+          "name": "深绿斗篷夹层",
+          "aliases": ["斗篷", "夹层", "衣箱", "深绿斗篷"],
+          "result": {
+            "type": "clue",
+            "clue_id": "clue_03",
+            "message": "斗篷内侧藏着一本被布包裹的日记，封面写着马尔康的名字。"
+          }
+        },
+        {
+          "id": "wastepaper",
+          "name": "废纸篓",
+          "aliases": ["废纸", "废纸篓", "柏南"],
+          "result": {
+            "type": "empty",
+            "message": "只是一份被驳回的撤军草稿，写于盛怒之下。"
+          }
+        },
+        {
+          "id": "broken_seal",
+          "name": "断裂蜡封",
+          "aliases": ["蜡封", "抽屉", "床头抽屉"],
+          "result": {
+            "type": "empty",
+            "message": "碎片残破不堪，已无法辨认来源。"
+          }
+        },
+        {
+          "id": "england_map",
+          "name": "英格兰地图",
+          "aliases": ["地图", "英格兰", "墙上地图"],
+          "result": {
+            "type": "empty",
+            "message": "那是寻常的行军地图，标注了英格兰方向的关隘。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "banquo_room",
+      "name": "班柯房间",
+      "public_summary": "班柯的客房看似朴素整洁，却有几处刻意掩盖的翻动痕迹。",
+      "entry_narration": "房中弥漫着油灯味，床脚一块石砖略高于周围，缝隙中没有积灰。桌上铁盒的锁已经损坏，墙上地图边缘留有指甲划痕，衣柜里的旧披风内衬被拆开过。",
+      "searchable_objects": [
+        {
+          "id": "loose_floor_brick",
+          "name": "床脚石砖",
+          "aliases": ["石砖", "床脚", "砖", "松动石砖"],
+          "result": {
+            "type": "clue",
+            "clue_id": "clue_04",
+            "message": "石砖下的凹槽里藏着一只小铁盒，里面是班柯的日记和一封未送出的密信。"
+          }
+        },
+        {
+          "id": "broken_lockbox",
+          "name": "损坏的铁盒",
+          "aliases": ["铁盒", "坏锁", "桌上铁盒"],
+          "result": {
+            "type": "empty",
+            "message": "显然有人已经翻找过了，只剩几枚铜币。"
+          }
+        },
+        {
+          "id": "wall_map",
+          "name": "墙上地图",
+          "aliases": ["地图", "指甲划痕", "墙"],
+          "result": {
+            "type": "empty",
+            "message": "那似乎对应着城堡周边的布防点位，是军事研究的痕迹。"
+          }
+        },
+        {
+          "id": "old_cloak",
+          "name": "旧披风",
+          "aliases": ["披风", "衣柜", "内衬"],
+          "result": {
+            "type": "empty",
+            "message": "只是穷酸修补，大概是仆人手艺不精。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "macduff_room",
+      "name": "麦克德夫房间",
+      "public_summary": "法夫领主的房间陈设克制，烧毁的信纸和厚重烛台显得并不寻常。",
+      "entry_narration": "铜烛台异常沉重，底座留有旋拧痕迹。桌上烧毁信笺的焦黑边角隐约可见‘盟’字，壁炉石雕鸢尾花的一片花瓣可以按动，床底暗柜中的族谱已经泛黄，‘剖腹’二字被指甲划过。",
+      "searchable_objects": [
+        {
+          "id": "candlestick_base",
+          "name": "铜烛台底座",
+          "aliases": ["烛台", "底座", "铜烛台", "旋拧痕迹"],
+          "result": {
+            "type": "clue",
+            "clue_id": "clue_09",
+            "message": "底座被旋开后露出中空暗格，其中藏着半片羊皮纸盟约。"
+          }
+        },
+        {
+          "id": "burned_letter",
+          "name": "烧毁的信笺",
+          "aliases": ["信笺", "烧毁的信", "焦黑纸张", "盟字"],
+          "result": {
+            "type": "empty",
+            "message": "烧得太彻底了，只能辨认出零星几个字。"
+          }
+        },
+        {
+          "id": "iris_carving",
+          "name": "壁炉鸢尾花石雕",
+          "aliases": ["鸢尾花", "石雕", "花瓣", "壁炉石雕"],
+          "result": {
+            "type": "empty",
+            "message": "身后传来轻微机关声响，但只是一条早已废弃的旧密道。"
+          }
+        },
+        {
+          "id": "family_tree",
+          "name": "床底族谱",
+          "aliases": ["族谱", "床底", "剖腹"],
+          "result": {
+            "type": "empty",
+            "message": "只是一份普通的家族世系记录，‘剖腹’二字大概是谁随手划的记号。"
+          }
+        }
+      ]
+    }
+  ],
+  "ambient_locations": [
+    {
+      "id": "lady_macbeth_room",
+      "name": "麦克白夫人房间",
+      "description": "房中弥漫着玫瑰与铁锈混合的气味，银镜映着烛光，雕花木箱半掩在床脚。"
+    },
+    {
+      "id": "cellar",
+      "name": "地窖",
+      "description": "潮湿石墙间排列着酒桶和药草架，空气里残留着苦涩气味。"
+    },
+    {
+      "id": "corridor",
+      "name": "城堡走廊",
+      "description": "石墙把脚步声拉得很长，东侧回廊的烛火比别处更暗。"
+    },
+    {
+      "id": "hall",
+      "name": "大厅",
+      "description": "长桌上仍留着昨夜宴会的痕迹，壁炉已经熄灭。"
+    },
+    {
+      "id": "kitchen",
+      "name": "厨房",
+      "description": "炉火余温尚存，杯盘已经被清洗，没有发现异常物品。"
+    },
+    {
+      "id": "servants_quarters",
+      "name": "仆人房",
+      "description": "床铺狭窄而整齐，仆人们对昨夜发生的事讳莫如深。"
+    },
+    {
+      "id": "courtyard",
+      "name": "庭院",
+      "description": "夜露打湿石板，风吹散了可能留下的脚印。"
+    }
+  ],
+  "ambient_location_rule": {
+    "send_clue": false,
+    "message": "可以提供符合剧本设定的环境描写和模糊暗示，但不得编造新证据或发放线索卡。"
+  }
+}
