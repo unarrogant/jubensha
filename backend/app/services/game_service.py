@@ -337,7 +337,7 @@ class GameService:
 
         if current_stage is None:
             raise ValueError(
-                f"找不到阶段{game["stage_id"]}"
+                f"找不到阶段{game['stage_id']}"
             )
 
         if current_stage.get("manual_transition",False):
