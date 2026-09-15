@@ -23,7 +23,7 @@ class RoleService:
 
         if room["player_count"]!=room["required_players"]:
             raise ValueError(
-                f"需要正好{room["required_players"]}名玩家才能分配角色"
+                f"需要正好{room['required_players']}名玩家才能分配角色"
             )
 
         bundle=self.bundle_loader.load(
