@@ -139,7 +139,7 @@ class RoomRepository:
             raise ValueError("当前房间不是等待状态")
 
         if room["player_count"]!=room["required_players"]:
-            raise ValueError(f"需要正好{room["required_players"]}名玩家才能开始")
+            raise ValueError(f"需要正好{room['required_players']}名玩家才能开始")
 
         room["status"]="playing"
         room["dm_status"]="running"
