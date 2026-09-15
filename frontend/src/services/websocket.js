@@ -1,5 +1,7 @@
+const defaultWsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 const DEFAULT_WS_BASE_URL =
-  import.meta.env.VITE_WS_BASE_URL || "ws://127.0.0.1:8000/api";
+  import.meta.env.VITE_WS_BASE_URL ||
+  defaultWsProtocol + "//" + window.location.host + "/api";
 
 export class RoomWebSocket {
   constructor({ roomId, playerId, baseUrl = DEFAULT_WS_BASE_URL }) {
