@@ -1,0 +1,14 @@
+.git
+.tmp
+node_modules
+backend/.venv
+backend/.env
+frontend/node_modules
+frontend/dist
+**/__pycache__
+**/.pytest_cache
+*.pyc
+*.log
+server.key
+server.crt
+server.csr
