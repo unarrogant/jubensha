@@ -78,6 +78,15 @@ let hasConnectedOnce = false;
 const roomId = computed(() => String(route.params.roomId).toUpperCase());
 const session = computed(() => roomStore.readSession(roomId.value));
 const script = computed(() => roomStore.getScript(room.value?.script_id));
+const stageOrder = {
+  waiting: 0,
+  role_selection: 1,
+  intro: 2,
+  investigation: 3,
+  discussion: 4,
+  voting: 5,
+  ending: 6,
+};
 const stageName = computed(() => {
   const names = {
     intro: "角色自我介绍",
@@ -136,13 +145,62 @@ function addMessage(message) {
   nextTick(() => {
     if (messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight;
   });
+  updateStageAnnouncementPending();
+}
+
+function updateStageAnnouncementPending() {
+  const stageStartedAt = gameState.value?.stage_started_at
+    ? Date.parse(gameState.value.stage_started_at)
+    : null;
+  const hasCurrentStageAnnouncement = messages.value.some((message) => {
+    if (message.channel !== "PUBLIC_MESSAGE") return false;
+    if (!stageStartedAt || Number.isNaN(stageStartedAt)) return true;
+    const createdAt = Date.parse(message.created_at || "");
+    return Number.isNaN(createdAt) || createdAt >= stageStartedAt;
+  });
+  stageAnnouncementPending.value = !hasCurrentStageAnnouncement;
+}
+
+function applyGameState(nextState) {
+  if (!nextState?.stage_id) return;
+
+  const currentStageId = gameState.value?.stage_id;
+  const nextStageId = nextState.stage_id;
+  const currentOrder = stageOrder[currentStageId] ?? -1;
+  const nextOrder = stageOrder[nextStageId] ?? -1;
+
+  // 轮询请求可能比阶段事件更晚返回。不能让旧的 discussion/intro 状态
+  // 覆盖已经进入 voting 的页面，否则投票面板会瞬间消失。
+  if (
+    currentStageId === "voting"
+    && nextStageId !== "voting"
+    && nextOrder < currentOrder
+  ) {
+    return;
+  }
+
+  if (currentStageId === "voting" && nextStageId === "voting") {
+    // 投票一旦由 VOTE_OPENED 打开，在同一投票阶段不允许旧响应关闭它。
+    const keepVoteOpen = voteOpen.value || Boolean(gameState.value?.vote_open);
+    const nextVoteOpen = Boolean(nextState.vote_open) || keepVoteOpen;
+    gameState.value = { ...nextState, vote_open: nextVoteOpen };
+    voteOpen.value = nextVoteOpen;
+    return;
+  }
+
+  gameState.value = nextState;
+  voteOpen.value = Boolean(nextState.vote_open);
 }
 
 async function syncGameState() {
   try {
     const state = await getGameState(roomId.value);
-    gameState.value = state;
-    voteOpen.value = Boolean(state.vote_open);
+    applyGameState(state);
+    if (stageAnnouncementPending.value) {
+      const history = await getMessages(roomId.value, session.value.playerId);
+      messages.value = history;
+    }
+    updateStageAnnouncementPending();
     updateRemainingTime();
     if (state.stage_id === "voting" || state.stage_id === "ending") {
       await syncVoteStatus();
@@ -238,11 +296,10 @@ async function loadGame() {
     players.value = playerData;
     character.value = characterData;
     clues.value = clueData;
-    gameState.value = stateData;
-    voteOpen.value = Boolean(stateData.vote_open);
+    applyGameState(stateData);
     updateRemainingTime();
     messages.value = messageData;
-    stageAnnouncementPending.value = messageData.length === 0;
+    updateStageAnnouncementPending();
     if (stateData.stage_id === "voting" || stateData.stage_id === "ending") {
       await syncVoteStatus();
     }
@@ -347,6 +404,7 @@ async function connectRoom() {
   roomSocket.on("message", async (event) => {
     if (event.type === "CHAT_HISTORY") {
       messages.value = event.messages || [];
+      updateStageAnnouncementPending();
       await nextTick();
       if (messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight;
     }
@@ -356,7 +414,7 @@ async function connectRoom() {
         awaitingHost.value = false;
       }
       if (event.type === "PUBLIC_MESSAGE") {
-        stageAnnouncementPending.value = false;
+        updateStageAnnouncementPending();
         // 主持词可能先于阶段事件到达，重新从服务器读取状态，避免不同玩家状态不一致。
         await syncGameState();
         if (gameState.value?.stage_id === "voting" && gameState.value.vote_open) {
@@ -374,8 +432,7 @@ async function connectRoom() {
       errorMessage.value = event.message || "请求处理失败，请稍后重试。";
     }
     if (event.type === "STAGE_CHANGED") {
-      gameState.value = event.game;
-      voteOpen.value = Boolean(event.game?.vote_open);
+      applyGameState(event.game);
       stageAnnouncementPending.value = true;
       updateRemainingTime();
       if (event.game?.stage_id === "voting") {
@@ -383,8 +440,9 @@ async function connectRoom() {
       }
     }
     if (event.type === "VOTE_OPENED") {
-      gameState.value = event.game || gameState.value;
+      applyGameState(event.game || gameState.value);
       voteOpen.value = true;
+      if (gameState.value) gameState.value.vote_open = true;
       activeCaseTab.value = "clues";
       stageAnnouncementPending.value = false;
       await syncVoteStatus();
