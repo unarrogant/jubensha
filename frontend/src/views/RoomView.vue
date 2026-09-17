@@ -712,7 +712,10 @@ onBeforeUnmount(() => {
               主持人正在回应<span></span><span></span><span></span>
             </div>
 
-            <section v-if="gameState?.stage_id === 'voting' && voteOpen" class="vote-panel vote-panel-chat">
+            <section
+              v-if="gameState?.stage_id === 'voting' && (voteOpen || gameState?.vote_open)"
+              class="vote-panel vote-panel-chat"
+            >
               <div class="vote-panel-heading">
                 <div>
                   <span class="overline">FINAL ACCUSATION</span>

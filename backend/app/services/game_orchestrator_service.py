@@ -191,11 +191,15 @@ class GameOrchestratorService:
             ):
                 return
 
+            if stage_id == "voting":
+                # 先持久化投票状态，再发送主持词，避免前端收到主持词后
+                # 立即同步时仍读到 vote_open=false，从而隐藏投票面板。
+                current_room.setdefault("game", {})["vote_open"] = True
+                self.room_repository.save(room_id)
+
             await self._publish_message(room_id, content)
 
             if stage_id == "voting":
-                current_room.setdefault("game", {})["vote_open"] = True
-                self.room_repository.save(room_id)
                 await self.connection_manager.broadcast_room(
                     room_id=room_id,
                     event={
