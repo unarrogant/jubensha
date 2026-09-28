@@ -50,7 +50,9 @@ class ReasoningService:
         ):
             return {
                 "channel": "PRIVATE_MESSAGE",
-                "message": "This reasoning clue has already been triggered.",
+                # 这是给 Agent 的内部状态，不直接展示给玩家。
+                "status": "already_triggered",
+                "message": None,
                 "rule_id": rule_id,
                 "clue_ids": [],
                 "delivery": "triggering_player",

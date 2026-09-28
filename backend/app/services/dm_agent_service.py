@@ -1,3 +1,4 @@
+import re
 from uuid import uuid4
 
 from app.repositories.room_repository import RoomRepository
@@ -303,6 +304,45 @@ class DMAgentService:
             "EVENT_PAYLOAD": event_payload or {},
         }
 
+    @staticmethod
+    def _polish_ending_content(content: str) -> str:
+        """Keep the public ending as one readable host narration.
+
+        The model is instructed to write prose, but a small normalization step
+        prevents occasional Markdown headings or list markers from leaking into
+        the player-facing chat.
+        """
+        if not isinstance(content, str):
+            return ""
+
+        polished_lines = []
+        for raw_line in content.replace("\r\n", "\n").split("\n"):
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            plain_line = line.strip("* ")
+            if plain_line.rstrip("：:") in {
+                "完整真相",
+                "角色命运",
+                "本局结局",
+                "案件真相与结局",
+            }:
+                continue
+
+            line = re.sub(r"^\s*(?:[-*•]\s+|\d+[.)、]\s+)", "", line)
+            line = re.sub(r"\*{1,3}([^*]+)\*{1,3}", r"\1", line)
+            line = re.sub(
+                r"</?(?:ds_system|ds_tool_call|tool_call)[^>]*>",
+                "",
+                line,
+                flags=re.IGNORECASE,
+            )
+            line = line.replace("```", "").strip()
+            polished_lines.append(line.strip())
+
+        return "".join(polished_lines).strip()
+
     def handle_public_event(
         self,
         room_id: str,
@@ -344,11 +384,16 @@ class DMAgentService:
                 }
             },
         )
+        content = result.get(
+            "response",
+            "当前发生了一些变化。",
+        )
+        if stage_id == "ending":
+            content = self._polish_ending_content(content)
+            if not content:
+                content = "案件的最后真相已经揭开，主持人正在整理每个人走向的结局。"
         return DMAgentResult(
             visibility="public",
-            content=result.get(
-                "response",
-                "当前发生了一些变化。",
-            ),
+            content=content,
             clue_ids=[],
         )

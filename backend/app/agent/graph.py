@@ -10,6 +10,14 @@ from app.config import get_deepseek_config
 
 
 def build_dm_graph(checkpointer=None, tools=None):
+    # Keep the latest turns verbatim and summarize only older turns. The
+    # checkpoint still retains the full audit history; this limit is for the
+    # model request so token usage does not grow with the whole session.
+    RECENT_MESSAGES_TO_KEEP = 10
+    SUMMARY_TRIGGER_MESSAGES = 16
+    SUMMARY_INPUT_MAX_CHARS = 14000
+    SUMMARY_OUTPUT_MAX_CHARS = 6000
+
     tools = tools or []
     config = get_deepseek_config()
 
@@ -23,6 +31,89 @@ def build_dm_graph(checkpointer=None, tools=None):
     )
 
     tool_llm = llm.bind_tools(tools)
+
+    def _message_text(message) -> str:
+        """Convert a LangChain message into compact, safe summary text."""
+        content = getattr(message, "content", "")
+        if not isinstance(content, str):
+            content = json.dumps(content, ensure_ascii=False, default=str)
+
+        tool_calls = getattr(message, "tool_calls", None)
+        if tool_calls:
+            content = f"{content}\n工具调用：{json.dumps(tool_calls, ensure_ascii=False, default=str)}"
+
+        return content.strip()
+
+    def _summary_transcript(messages: list) -> str:
+        lines = []
+        for message in messages:
+            message_type = getattr(message, "type", "message")
+            if message_type == "system":
+                # The current DM_SYSTEM is injected on every model request;
+                # storing it in the conversation summary only wastes tokens.
+                continue
+
+            content = _message_text(message)
+            if not content:
+                continue
+
+            role = {
+                "human": "玩家",
+                "ai": "主持人",
+                "tool": "工具结果",
+            }.get(message_type, message_type)
+            lines.append(f"{role}：{content[:1800]}")
+
+        transcript = "\n".join(lines)
+        return transcript[:SUMMARY_INPUT_MAX_CHARS]
+
+    def compact_history_node(state: DMState) -> dict:
+        """Summarize old thread messages once the session grows large."""
+        messages = list(state.get("messages", []))
+        if len(messages) < SUMMARY_TRIGGER_MESSAGES:
+            return {}
+
+        summarized_until = state.get("history_summarized_until", 0)
+        if not isinstance(summarized_until, int) or summarized_until < 0:
+            summarized_until = 0
+
+        keep_from = max(0, len(messages) - RECENT_MESSAGES_TO_KEEP)
+        if keep_from <= summarized_until:
+            return {}
+
+        transcript = _summary_transcript(messages[summarized_until:keep_from])
+        if not transcript:
+            return {"history_summarized_until": keep_from}
+
+        previous_summary = state.get("history_summary", "")
+        summary_prompt = (
+            "你是剧本杀 Agent 的上下文压缩器。请把旧的对话压缩成一段简洁、"
+            "事实准确的中文摘要，供同一个玩家线程继续使用。只保留已经发生的事实、"
+            "玩家提出的关键判断、主持人已经给出的结果、工具调用结果和未完成的调查方向。"
+            "不要新增推理，不要把不确定内容写成事实，不要输出标题、JSON 或项目符号。"
+            "当前房间的角色、线索、阶段和规则以最新业务上下文为准，不要在摘要中重新定义它们。\n\n"
+            f"已有摘要：{previous_summary or '无'}\n\n"
+            f"需要压缩的旧消息：\n{transcript}"
+        )
+
+        try:
+            response = llm.invoke([
+                SystemMessage(content="你只负责压缩 Agent 对话历史，不负责主持游戏。"),
+                HumanMessage(content=summary_prompt),
+            ])
+            summary = _message_text(response)[:SUMMARY_OUTPUT_MAX_CHARS]
+        except Exception:
+            # Compression is an optimization. If it fails, retain the full
+            # history for this request instead of breaking the player's turn.
+            return {}
+
+        if not summary:
+            return {}
+
+        return {
+            "history_summary": summary,
+            "history_summarized_until": keep_from,
+        }
 
     def validate_request_node(state: DMState) -> dict:
         """Validate the request boundary before spending an LLM call."""
@@ -56,9 +147,36 @@ def build_dm_graph(checkpointer=None, tools=None):
         system_prompt = context.get("DM_SYSTEM", "")
         is_public_event = state.get("request_type") == "public_event"
 
-        messages = list(
-            state.get("messages", [])
+        full_messages = list(state.get("messages", []))
+        history_summary = state.get("history_summary", "")
+        summarized_until = state.get("history_summarized_until", 0)
+        summary_covers_old_messages = (
+            bool(history_summary)
+            and isinstance(summarized_until, int)
+            and summarized_until >= max(
+                0,
+                len(full_messages) - RECENT_MESSAGES_TO_KEEP,
+            )
         )
+        if summary_covers_old_messages:
+            recent_messages = [
+                message
+                for message in full_messages[-RECENT_MESSAGES_TO_KEEP:]
+                if getattr(message, "type", "") != "system"
+            ]
+            messages = [
+                SystemMessage(
+                    content=(
+                        f"{system_prompt}\n\n"
+                        "以下是该线程较早对话的压缩摘要，只能作为历史参考；"
+                        "当前阶段和线索以本次上下文为准：\n"
+                        f"{history_summary}"
+                    )
+                ),
+                *recent_messages,
+            ]
+        else:
+            messages = full_messages
 
         model_context = {
             key: value
@@ -98,6 +216,15 @@ def build_dm_graph(checkpointer=None, tools=None):
                     "如果当前阶段是 ending，必须依据 EVENT_PAYLOAD.ending 公布最终票型、"
                     "被指认结果、完整真相、胜方与主要角色命运，并在最后用一句话总结本局。"
                 )
+                if (state.get("event_payload") or {}).get("stage_id") == "ending":
+                    behavior_prompt += (
+                        "\n结局复盘必须写成连续、完整的中文主持人口述，不得使用项目符号、编号、"
+                        "Markdown 加粗、分栏标题、字段名、JSON 或英文内部标记。请按时间顺序还原 "
+                        "EVENT_PAYLOAD.ending 中的案件经过，交代人物动机、关键行动、现场如何被伪造、"
+                        "调查如何揭开真相，以及投票之后发生的结局。必须覆盖 truth_reveal 中的全部事实，"
+                        "但要把事实自然融入故事，不要逐条照抄。故事结束后，再用连贯的叙述自然交代每位主要角色"
+                        "最后的命运，不要另起“角色命运”清单。语言要沉浸、克制、完整，避免奇怪符号和内部系统词。"
+                    )
             else:
                 behavior_prompt = "\n只使用提供的工具，不要编造工具结果。"
 
@@ -110,16 +237,33 @@ def build_dm_graph(checkpointer=None, tools=None):
                 ),
             ]
 
-        elif getattr(messages[-1], "type", "") != "tool":
+        elif getattr(messages[-1], "type", "") == "tool":
+            # 工具只返回事实和内部状态；必须再让模型把结果改写成主持人口吻。
+            messages.append(
+                HumanMessage(
+                    content=(
+                        "请把刚才工具返回的结果改写成自然、沉浸式的主持人回复。"
+                        "不要输出 JSON、工具名、rule_id、status、字段名或英文内部提示。"
+                        "如果结果表示该推理已经触发过，只委婉说明暂时没有新的发现，"
+                        "不要提到系统拒绝、重复触发或内部规则。"
+                    ),
+                )
+            )
+        else:
             messages.append(
                 HumanMessage(
                     content=request_content,
                 )
             )
 
+        after_tool_result = bool(
+            len(messages) >= 2
+            and getattr(messages[-2], "type", "") == "tool"
+            and getattr(messages[-1], "type", "") == "human"
+        )
         response = (
             llm.invoke(messages)
-            if is_public_event
+            if is_public_event or after_tool_result
             else tool_llm.invoke(messages)
         )
 
@@ -186,6 +330,9 @@ def build_dm_graph(checkpointer=None, tools=None):
 
             channel = data.get("channel")
             tool_message = data.get("message")
+            tool_data = data.get("data", {})
+            if not isinstance(tool_data, dict):
+                tool_data = {}
 
             clue_ids = data.get("clue_ids", [])
             if not isinstance(clue_ids, list):
@@ -197,7 +344,9 @@ def build_dm_graph(checkpointer=None, tools=None):
             if clue_id and clue_id not in clue_ids:
                 clue_ids.append(clue_id)
 
-            if not channel and not tool_message and not clue_ids:
+            status = data.get("status")
+
+            if not channel and not tool_message and not clue_ids and not status:
                 break
 
             return {
@@ -208,6 +357,8 @@ def build_dm_graph(checkpointer=None, tools=None):
                 ),
                 "content": tool_message,
                 "clue_ids": clue_ids,
+                "status": status,
+                "data": tool_data,
             }
 
         if saw_tool_message:
@@ -215,12 +366,15 @@ def build_dm_graph(checkpointer=None, tools=None):
                 "visibility": "private",
                 "content": None,
                 "clue_ids": [],
+                "status": None,
+                "data": {},
             }
 
         return {
             "visibility": "private",
             "content": None,
             "clue_ids": [],
+            "data": {},
         }
 
     def apply_tool_result_node(state: DMState) -> dict:
@@ -243,6 +397,8 @@ def build_dm_graph(checkpointer=None, tools=None):
                 "visibility": visibility,
                 "content": tool_result.get("content"),
                 "clue_ids": clue_ids,
+                "status": tool_result.get("status"),
+                "data": tool_result.get("data", {}),
             }
         }
 
@@ -256,15 +412,6 @@ def build_dm_graph(checkpointer=None, tools=None):
             },
         )
 
-        # 搜证和推理服务已经生成了剧本规定的描述，
-        # 不需要再让模型重写一次。
-        if tool_result.get("content"):
-            return {
-                "response": tool_result["content"],
-                "visibility": tool_result.get("visibility", "private"),
-                "clue_ids": tool_result.get("clue_ids", []),
-            }
-
         messages = state.get("messages", [])
         response_content = (
             getattr(messages[-1], "content", "")
@@ -275,25 +422,36 @@ def build_dm_graph(checkpointer=None, tools=None):
         if not isinstance(response_content, str):
             response_content = str(response_content)
 
+        if not response_content.strip():
+            if tool_result.get("status") == "already_triggered":
+                response_content = (
+                    "你的思路已经触及过这条线索，但眼下没有新的发现。"
+                    "可以结合手中的证据，从另一个角度继续梳理。"
+                )
+            else:
+                response_content = tool_result.get("content") or "主持人暂时没有更多信息。"
+
         return {
             "response": (
                 response_content.strip()
                 or "主持人暂时没有更多信息。"
             ),
-            "visibility": "private",
-            "clue_ids": [],
+            "visibility": tool_result.get("visibility", "private"),
+            "clue_ids": tool_result.get("clue_ids", []),
         }
     
     graph = StateGraph(DMState)
 
     graph.add_node("validate_request", validate_request_node)
+    graph.add_node("compact_history", compact_history_node)
     graph.add_node("decide", decide_node)
     graph.add_node("tools", ToolNode(tools))
     graph.add_node("apply_tool_result", apply_tool_result_node)
     graph.add_node("render", final_node)
 
     graph.add_edge(START, "validate_request")
-    graph.add_edge("validate_request", "decide")
+    graph.add_edge("validate_request", "compact_history")
+    graph.add_edge("compact_history", "decide")
 
     graph.add_conditional_edges(
         "decide",

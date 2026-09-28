@@ -122,6 +122,23 @@ const characterAvatarUrl = computed(() =>
 const hostAvatarUrl = computed(() =>
   roomStore.getAssetUrl(script.value, script.value?.agent_profile?.avatar),
 );
+const endingData = computed(() => gameState.value?.ending || null);
+const endingStory = computed(() => {
+  const finalMessage = [...messages.value]
+    .reverse()
+    .find(
+      (message) =>
+        message.channel === "PUBLIC_MESSAGE" &&
+        typeof message.content === "string" &&
+        message.content.trim(),
+    );
+
+  return (
+    finalMessage?.content ||
+    endingData.value?.narrative ||
+    "主持人正在整理这场案件的最后真相。"
+  );
+});
 
 function getPlayerAvatarUrl(player) {
   return roomStore.getAssetUrl(script.value, player?.character_avatar);
@@ -205,6 +222,14 @@ async function syncGameState() {
     if (state.stage_id === "voting" || state.stage_id === "ending") {
       await syncVoteStatus();
     }
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
+
+async function syncPublicPlayers() {
+  try {
+    players.value = await getRoomPlayers(roomId.value);
   } catch (error) {
     errorMessage.value = error.message;
   }
@@ -390,6 +415,7 @@ async function connectRoom() {
 
   roomSocket.on("open", () => {
     connectionState.value = "online";
+    void syncPublicPlayers();
     if (voiceEnabled.value) publishVoiceState();
     if (hasConnectedOnce) void syncGameState();
     hasConnectedOnce = true;
@@ -402,6 +428,14 @@ async function connectRoom() {
     connectionState.value = "reconnecting";
   });
   roomSocket.on("message", async (event) => {
+    if (event.type === "LOBBY_UPDATED" || event.type === "GAME_STARTED") {
+      if (event.room) room.value = { ...room.value, ...event.room };
+      if (Array.isArray(event.players)) {
+        players.value = event.players;
+      } else {
+        await syncPublicPlayers();
+      }
+    }
     if (event.type === "CHAT_HISTORY") {
       messages.value = event.messages || [];
       updateStageAnnouncementPending();
@@ -769,6 +803,20 @@ onBeforeUnmount(() => {
             <div v-if="awaitingHost" class="dm-thinking" aria-label="主持人正在回复">
               主持人正在回应<span></span><span></span><span></span>
             </div>
+
+            <section v-if="endingData" class="ending-panel" aria-live="polite">
+              <div class="ending-panel-heading">
+                <div>
+                  <span class="overline">FINAL REVEAL</span>
+                  <h2>案件真相与结局</h2>
+                </div>
+                <ShieldAlert :size="20" />
+              </div>
+
+              <div class="ending-story">
+                <p>{{ endingStory }}</p>
+              </div>
+            </section>
 
             <section
               v-if="gameState?.stage_id === 'voting' && (voteOpen || gameState?.vote_open)"

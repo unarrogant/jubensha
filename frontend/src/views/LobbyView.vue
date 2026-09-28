@@ -33,6 +33,7 @@ const errorMessage = ref("");
 const connectionState = ref("connecting");
 const copied = ref(false);
 let roomSocket = null;
+let lobbySyncTimer = null;
 
 const roomId = computed(() => String(route.params.roomId).toUpperCase());
 const session = computed(() => roomStore.readSession(roomId.value));
@@ -55,6 +56,7 @@ const playerSlots = computed(() => {
 });
 
 async function loadLobby({ quiet = false } = {}) {
+  if (quiet && refreshing.value) return;
   if (quiet) refreshing.value = true;
   errorMessage.value = "";
 
@@ -91,6 +93,8 @@ function connectRoom() {
 
   roomSocket.on("open", () => {
     connectionState.value = "online";
+    // Recover the latest player list after an initial connection or reconnect.
+    void loadLobby({ quiet: true });
   });
   roomSocket.on("close", () => {
     connectionState.value = "reconnecting";
@@ -100,8 +104,12 @@ function connectRoom() {
   });
   roomSocket.on("message", async (event) => {
     if (event.type === "LOBBY_UPDATED" || event.type === "GAME_STARTED") {
-      room.value = event.room;
-      players.value = event.players;
+      if (event.room) room.value = { ...room.value, ...event.room };
+      if (Array.isArray(event.players)) {
+        players.value = event.players;
+      } else {
+        await loadLobby({ quiet: true });
+      }
     }
     if (event.type === "GAME_STARTED") {
       await router.replace(`/room/${roomId.value}`);
@@ -161,9 +169,15 @@ onMounted(async () => {
 
   await loadLobby();
   connectRoom();
+  lobbySyncTimer = window.setInterval(() => {
+    if (room.value?.status === "waiting") {
+      void loadLobby({ quiet: true });
+    }
+  }, 2000);
 });
 
 onBeforeUnmount(() => {
+  if (lobbySyncTimer) window.clearInterval(lobbySyncTimer);
   roomSocket?.close();
 });
 </script>

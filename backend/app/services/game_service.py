@@ -74,6 +74,34 @@ class GameService:
                 return stage
         return None
 
+    def _public_ending(self, room: dict, bundle: dict) -> dict | None:
+        """Expose ending facts with character names for the final replay panel."""
+        ending = room.get("ending")
+        if not isinstance(ending, dict):
+            return None
+
+        character_names = {
+            character.get("id"): character.get("name")
+            for character in bundle.get("characters", [])
+            if character.get("id")
+        }
+        public_ending = dict(ending)
+        public_ending["suspect_name"] = character_names.get(
+            ending.get("suspect_id")
+        )
+        public_ending["winner_name"] = character_names.get(
+            ending.get("winner")
+        )
+        public_ending["character_fate_list"] = [
+            {
+                "character_id": character_id,
+                "character_name": character_names.get(character_id, character_id),
+                "fate": fate,
+            }
+            for character_id, fate in (ending.get("character_fates") or {}).items()
+        ]
+        return public_ending
+
     def get_public_state(self,room_id:str)->dict:
         room=self.room_repository.get(room_id)
 
@@ -92,7 +120,11 @@ class GameService:
         stage_deadline=game.get("stage_deadline")
         remaining_seconds=None
         votes = room.get("votes", {})
-        ending = room.get("ending") if game.get("stage_id") == "ending" else None
+        ending = (
+            self._public_ending(room, bundle)
+            if game.get("stage_id") == "ending"
+            else None
+        )
 
         if stage_deadline:
             deadline=datetime.fromisoformat(stage_deadline)

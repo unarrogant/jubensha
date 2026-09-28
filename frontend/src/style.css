@@ -1339,16 +1339,17 @@ textarea::placeholder {
 .character-portrait {
   width: 100%;
   height: auto;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: auto;
   background: #e8ece9;
   overflow: hidden;
 }
 
 .character-portrait img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 18%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  object-position: center;
 }
 
 .character-sheet > h1 {
@@ -2061,6 +2062,86 @@ textarea::placeholder {
   line-height: 1.6;
 }
 
+/* Room readability: private role data, clues, timeline and chat */
+.game-main .character-sheet > p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.game-main .player-identity span {
+  font-size: 12px;
+}
+
+.game-main .player-identity strong {
+  font-size: 15px;
+}
+
+.game-main .private-label {
+  font-size: 11px;
+}
+
+.game-main .character-block h2 {
+  font-size: 15px;
+}
+
+.game-main .character-block p,
+.game-main .character-block li {
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.game-main .message-meta > span {
+  font-size: 11px;
+}
+
+.game-main .message-meta small {
+  font-size: 10px;
+}
+
+.game-main .message-item p {
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.game-main .message-composer textarea {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.game-main .case-tabs button {
+  font-size: 12px;
+}
+
+.game-main .case-heading h2 {
+  font-size: 20px;
+}
+
+.game-main .clue-item > span {
+  font-size: 11px;
+}
+
+.game-main .clue-item h3 {
+  font-size: 15px;
+}
+
+.game-main .clue-item p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.game-main .clue-item small {
+  font-size: 11px;
+}
+
+.game-main .timeline-list time {
+  font-size: 11px;
+}
+
+.game-main .timeline-list p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+
 .spinning {
   animation: spin 800ms linear infinite;
 }
@@ -2301,11 +2382,6 @@ textarea::placeholder {
 
   .stage-status {
     display: none;
-  }
-
-  .character-sheet {
-    max-height: 400px;
-    overflow-y: auto;
   }
 
   .cast-list {
@@ -3927,6 +4003,193 @@ textarea::placeholder {
   margin: 0 auto;
 }
 
+/* Give the game workspace enough room for role dossiers and clue cards. */
+@media (min-width: 1200px) {
+  .game-main {
+    width: min(1480px, calc(100% - 40px));
+  }
+
+  .game-main .game-workspace {
+    width: 100%;
+    max-width: none;
+    height: max(calc(100vh - 86px), 760px);
+    min-height: 760px;
+    grid-template-columns: 300px minmax(0, 1fr) 360px;
+    gap: 16px;
+  }
+}
+
+/* Readability for the private role dossier and the public cast list. */
+.game-main .character-sheet {
+  padding: 22px;
+  min-height: max-content;
+}
+
+/* Keep the full role card intact; scroll the character information rail itself. */
+.game-main .character-rail {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-self: stretch;
+}
+
+.game-main .character-sheet {
+  max-height: none;
+  overflow: visible;
+}
+
+.game-main .character-sheet > h1 {
+  font-size: 28px;
+}
+
+.game-main .character-sheet > p {
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.game-main .player-identity span {
+  font-size: 13px;
+}
+
+.game-main .player-identity strong {
+  font-size: 16px;
+}
+
+.game-main .private-label {
+  font-size: 12px;
+}
+
+.game-main .character-block h2 {
+  font-size: 16px;
+}
+
+.game-main .character-block p,
+.game-main .character-block li {
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.game-main .rail-title {
+  font-size: 13px;
+}
+
+.game-main .cast-item strong {
+  font-size: 15px;
+}
+
+.game-main .cast-item small {
+  font-size: 13px;
+}
+
+.game-main .cast-item {
+  min-height: 52px;
+  padding: 10px 0;
+}
+
+.game-main .message-meta > span {
+  font-size: 13px;
+}
+
+.game-main .message-meta small {
+  font-size: 11px;
+}
+
+.game-main .message-item p {
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.game-main .message-composer textarea {
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.game-main .dm-thinking {
+  font-size: 12px;
+}
+
+/* Clue cards get a little more breathing room without taking over chat. */
+.game-main .case-content {
+  padding: 20px;
+}
+
+.game-main .clue-item h3 {
+  font-size: 19px;
+}
+
+.game-main .clue-item p {
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.game-main .clue-item small {
+  font-size: 13px;
+}
+
+.game-main .case-tabs button {
+  font-size: 13px;
+}
+
+.game-main .case-heading h2 {
+  font-size: 22px;
+}
+
+.game-main .clue-item > span {
+  font-size: 13px;
+}
+
+.game-main .timeline-list time {
+  font-size: 13px;
+}
+
+.game-main .timeline-list p {
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.ending-panel {
+  margin: 18px 0 22px;
+  padding: 20px;
+  color: #3f4943;
+  background: #fffaf0;
+  border: 1px solid rgba(180, 148, 91, 0.5);
+  border-left: 4px solid var(--gold);
+  border-radius: 6px;
+}
+
+.ending-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(180, 148, 91, 0.28);
+}
+
+.ending-panel-heading > svg {
+  flex: 0 0 auto;
+  color: var(--gold);
+}
+
+.ending-panel-heading h2 {
+  margin: 2px 0 0;
+  color: #3d483f;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 23px;
+}
+
+.ending-story {
+  padding: 16px 0 4px;
+}
+
+.ending-story p {
+  margin: 0;
+  color: #5d665f;
+  font-size: 16px;
+  line-height: 2;
+  white-space: pre-wrap;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -4151,5 +4414,10 @@ textarea::placeholder {
 
   .message-item {
     max-width: 92%;
+  }
+
+  .game-main .character-sheet {
+    max-height: none;
+    overflow: visible;
   }
 }

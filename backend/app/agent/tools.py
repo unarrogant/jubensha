@@ -5,6 +5,13 @@ from langchain_core.tools import tool
 
 from app.agent.state import DMState
 from app.repositories.room_repository import RoomRepository
+from app.schemas.dm_agent import (
+    AgentToolResult,
+    EmptyToolArgs,
+    EnterLocationArgs,
+    InspectObjectArgs,
+    UnlockReasoningArgs,
+)
 from app.services.investigation_service import InvestigationService
 from app.services.reasoning_service import ReasoningService
 
@@ -34,12 +41,47 @@ def _assert_player_tool_allowed(state: DMState, tool_name: str) -> None:
         raise ValueError(f"当前阶段 {stage_id or 'unknown'} 不允许调用 {tool_name}")
 
 
+def _agent_tool_result(result: dict) -> dict:
+    channel = result.get("channel")
+    visibility = result.get("visibility")
+    if visibility not in {"private", "public"}:
+        visibility = "public" if channel == "PUBLIC_MESSAGE" else "private"
+    clue_ids = result.get("clue_ids", [])
+    clue_id = result.get("clue_id")
+    if clue_id and clue_id not in clue_ids:
+        clue_ids = [*clue_ids, clue_id]
+
+    status = result.get("status") or "success"
+    data = {
+        key: value
+        for key, value in result.items()
+        if key not in {
+            "channel",
+            "message",
+            "clue_id",
+            "clue_ids",
+            "status",
+            "visibility",
+            "data",
+        }
+    }
+    if isinstance(result.get("data"), dict):
+        data = {**result["data"], **data}
+    return AgentToolResult(
+        status=status,
+        visibility=visibility,
+        message=result.get("message"),
+        clue_ids=clue_ids,
+        data=data,
+    ).model_dump()
+
+
 def build_dm_tools(
     room_repository: RoomRepository,
     investigation_service: InvestigationService,
     reasoning_service:ReasoningService,
 ):
-    @tool
+    @tool(args_schema=EmptyToolArgs)
     def get_game_state(
         state: Annotated[DMState, InjectedState],
     ) -> dict:
@@ -50,17 +92,17 @@ def build_dm_tools(
         if room is None:
             raise ValueError("房间不存在")
 
-        return {
-            "room_id": room["id"],
-            "status": room["status"],
-            "game": room.get("game", {}),
-            "public_clue_ids": room.get(
-                "public_clue_ids",
-                [],
-            ),
-        }
+        return _agent_tool_result({
+            "status": "success",
+            "data": {
+                "room_id": room["id"],
+                "room_status": room["status"],
+                "game": room.get("game", {}),
+                "public_clue_ids": room.get("public_clue_ids", []),
+            },
+        })
     
-    @tool
+    @tool(args_schema=EnterLocationArgs)
     def enter_location(
         location_id: str,
         state: Annotated[DMState, InjectedState],
@@ -76,13 +118,15 @@ def build_dm_tools(
         if not player_id:
             raise ValueError("公共事件不能执行玩家搜证")
 
-        return investigation_service.enter_location(
-            room_id=room_id,
-            player_id=player_id,
-            location_id=location_id,
+        return _agent_tool_result(
+            investigation_service.enter_location(
+                room_id=room_id,
+                player_id=player_id,
+                location_id=location_id,
+            )
         )
 
-    @tool
+    @tool(args_schema=InspectObjectArgs)
     def inspect_object(
         location_id: str,
         object_text: str,
@@ -99,14 +143,16 @@ def build_dm_tools(
         if not player_id:
             raise ValueError("公共事件不能执行玩家搜证")
 
-        return investigation_service.inspect_object(
-            room_id=room_id,
-            player_id=player_id,
-            location_id=location_id,
-            object_text=object_text,
+        return _agent_tool_result(
+            investigation_service.inspect_object(
+                room_id=room_id,
+                player_id=player_id,
+                location_id=location_id,
+                object_text=object_text,
+            )
         )
 
-    @tool
+    @tool(args_schema=UnlockReasoningArgs)
     def unlock_reasoning_rule(
         rule_id: str,
         reasoning: str,
@@ -121,11 +167,13 @@ def build_dm_tools(
         if not player_id:
             raise ValueError("公共事件不能提交玩家推理")
 
-        return reasoning_service.unlock_rule(
-            room_id=room_id,
-            player_id=player_id,
-            rule_id=rule_id,
-            reasoning=reasoning,
+        return _agent_tool_result(
+            reasoning_service.unlock_rule(
+                room_id=room_id,
+                player_id=player_id,
+                rule_id=rule_id,
+                reasoning=reasoning,
+            )
         )
 
     return [

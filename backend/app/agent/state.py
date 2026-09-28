@@ -10,9 +10,12 @@ AgentAction = Literal["tool_call", "respond"]
 
 
 class ToolResult(TypedDict, total=False):
+    status: str
     visibility: Visibility
+    message: str | None
     content: str | None
     clue_ids: list[str]
+    data: dict[str, Any]
 
 
 class DMState(TypedDict, total=False):
@@ -25,6 +28,8 @@ class DMState(TypedDict, total=False):
     response: str
     clue_ids: list[str]
     tool_result: ToolResult
+    history_summary: str
+    history_summarized_until: int
     request_type: RequestType
     messages: Annotated[
         list[AnyMessage],

@@ -1,0 +1,5 @@
+{"name":"enter_location_investigation","request_type":"player_private","stage":"investigation","input":"去案发现场","expected_tool":"enter_location","expected_visibility":"private","forbidden_tools":["get_game_state"]}
+{"name":"inspect_real_clue","request_type":"player_private","stage":"investigation","input":"检查壁炉灰烬","expected_tool":"inspect_object","expected_visibility":"private","expected_clue":"clue_10"}
+{"name":"reject_voting_search","request_type":"player_private","stage":"voting","input":"去案发现场搜证","expected_tool":null,"expected_error":"forbidden"}
+{"name":"unlock_reasoning","request_type":"player_private","stage":"discussion","input":"我认为麦克白夫人伪造了侍卫行凶现场","expected_tool":"unlock_reasoning_rule","expected_visibility":"private"}
+{"name":"public_event_no_private_tool","request_type":"public_event","stage":"investigation","input":"宣布搜证阶段开始","expected_tool":null,"forbidden_tools":["enter_location","inspect_object","unlock_reasoning_rule"]}
