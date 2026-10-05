@@ -10,6 +10,7 @@ AgentAction = Literal["tool_call", "respond"]
 
 
 class ToolResult(TypedDict, total=False):
+    name: str | None
     status: str
     visibility: Visibility
     message: str | None
@@ -38,3 +39,4 @@ class DMState(TypedDict, total=False):
     event_type: str
     event_payload: dict[str, Any]
     agent_action: AgentAction
+    tool_called_this_turn: bool

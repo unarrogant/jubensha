@@ -10,6 +10,7 @@ SCRIPT_FILES={
     "clues":"clues.json",
     "unlock_rules":"unlock_rules.json",
     "endings":"endings.json",
+    "vocabulary":"vocabulary.json",
 }
 
 class ScriptBundleLoader:
@@ -60,5 +61,3 @@ class ScriptBundleLoader:
 
         with file_path.open("r",encoding="utf8") as file:
             return json.load(file)
-
-        

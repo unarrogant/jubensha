@@ -56,6 +56,7 @@ class GameService:
             "vote_open": False,
         }
         room["votes"] = {}
+        room["peer_reviews"] = {}
         room.pop("ending", None)
         room["initial_clues_released"] = False
         room["public_clue_ids"] = []
@@ -278,23 +279,32 @@ class GameService:
         if len(leaders) > 1:
             result = {
                 "id": "ending_tied_vote",
-                "title": "王冠前的僵局",
-                "narrative": "最高票出现平局，众人的指认无法汇成唯一结论。真正的弑君者借着争执藏回阴影，苏格兰的王冠仍被猜忌与鲜血笼罩。",
+                "title": "A Deadlock Before the Crown",
+                "narrative": "The highest vote is tied, and the court cannot agree on a single accusation. Macbeth and Lady Macbeth use the division to bury the truth, leaving Scotland's crown beneath a shadow of suspicion and blood.",
                 "truth_reveal": [
-                    "本局投票没有产生唯一最高票角色。",
-                    "麦克白亲手以涂毒的匕首杀死邓肯，麦克白夫人协助策划并伪造现场。",
-                    "班柯知情却保持沉默，其他人的政治秘密则干扰了众人的判断。",
+                    "The final vote produced no single leading suspect.",
+                    "Macbeth killed Duncan with the poisoned dagger, while Lady Macbeth helped plan the murder and stage the scene.",
+                    "Banquo suspected the conspiracy but remained silent, while the other characters' political secrets distracted the investigation.",
                 ],
-                "character_fates": {},
+                "character_fates": {
+                    "banquo": "Banquo survives the accusation for now, but Macbeth later has him murdered to protect the throne.",
+                    "macbeth": "With no united accusation against him, Macbeth claims the Scottish crown and rules through fear.",
+                    "lady_macbeth": "Lady Macbeth becomes queen, but guilt gradually destroys her peace of mind.",
+                    "macduff": "Macduff refuses to accept the unresolved verdict and begins gathering resistance against Macbeth.",
+                    "malcolm": "Malcolm escapes to England, where he prepares to challenge Macbeth's rule.",
+                },
                 "winner": "macbeth",
                 "suspect_id": None,
             }
         elif matched_ending is None:
             result = {
                 "id": "ending_no_consensus",
-                "title": "未形成有效指认",
-                "narrative": "本局没有形成可以匹配剧本结局的有效投票，城堡里的疑云仍未散去。",
-                "truth_reveal": [],
+                "title": "No Valid Accusation",
+                "narrative": "The court fails to produce a valid accusation. The truth remains obscured, and suspicion continues to haunt every corridor of the castle.",
+                "truth_reveal": [
+                    "Macbeth killed Duncan, and Lady Macbeth helped prepare and conceal the crime.",
+                    "The investigation failed to turn the available evidence into a valid final accusation.",
+                ],
                 "character_fates": {},
                 "winner": None,
                 "suspect_id": top_suspect,
@@ -311,6 +321,121 @@ class GameService:
         room.setdefault("game", {})["ending_id"] = result["id"]
         self.room_repository.save(room_id)
         return result
+
+    def get_peer_review_status(self, room_id: str, player_id: str) -> dict:
+        room = self.room_repository.get(room_id)
+        if room is None:
+            raise FileNotFoundError("Room not found")
+        if room.get("game", {}).get("stage_id") != "ending":
+            raise ValueError("Peer review is available only after the final reveal")
+
+        players = room.get("players", [])
+        current_player = next(
+            (player for player in players if player.get("id") == player_id),
+            None,
+        )
+        if current_player is None:
+            raise ValueError("Player is not in this room")
+
+        bundle = self.bundle_loader.load(room["script_id"], room["script_version"])
+        character_names = {
+            item.get("id"): item.get("name")
+            for item in bundle.get("characters", [])
+        }
+        reviews = room.get("peer_reviews", {})
+        own_review = reviews.get(player_id, {})
+        required_count = len(players)
+        results_revealed = required_count > 0 and len(reviews) >= required_count
+
+        candidates = [
+            {
+                "player_id": player.get("id"),
+                "player_name": player.get("name"),
+                "character_name": character_names.get(player.get("character_id")),
+            }
+            for player in players
+            if player.get("id") != player_id
+        ]
+
+        def winners(field: str) -> list[dict]:
+            if not results_revealed:
+                return []
+            counts = Counter(
+                review.get(field)
+                for review in reviews.values()
+                if review.get(field)
+            )
+            highest = max(counts.values(), default=0)
+            return [
+                {
+                    "player_id": candidate_id,
+                    "player_name": next(
+                        (player.get("name") for player in players if player.get("id") == candidate_id),
+                        candidate_id,
+                    ),
+                    "character_name": character_names.get(next(
+                        (player.get("character_id") for player in players if player.get("id") == candidate_id),
+                        None,
+                    )),
+                    "votes": count,
+                }
+                for candidate_id, count in counts.items()
+                if count == highest
+            ]
+
+        return {
+            "has_submitted": player_id in reviews,
+            "submitted_count": len(reviews),
+            "required_count": required_count,
+            "best_speaker_id": own_review.get("best_speaker_id"),
+            "best_reasoner_id": own_review.get("best_reasoner_id"),
+            "candidates": candidates,
+            "results_revealed": results_revealed,
+            "best_speakers": winners("best_speaker_id"),
+            "best_reasoners": winners("best_reasoner_id"),
+        }
+
+    def submit_peer_review(
+        self,
+        room_id: str,
+        player_id: str,
+        best_speaker_id: str,
+        best_reasoner_id: str,
+    ) -> dict:
+        room = self.room_repository.get(room_id)
+        if room is None:
+            raise FileNotFoundError("Room not found")
+        if room.get("game", {}).get("stage_id") != "ending":
+            raise ValueError("Peer review is available only after the final reveal")
+
+        player_ids = {
+            player.get("id")
+            for player in room.get("players", [])
+            if player.get("id")
+        }
+        if player_id not in player_ids:
+            raise ValueError("Player is not in this room")
+        if best_speaker_id not in player_ids or best_reasoner_id not in player_ids:
+            raise ValueError("The selected player is not in this room")
+        if player_id in {best_speaker_id, best_reasoner_id}:
+            raise ValueError("You cannot vote for yourself in peer review")
+
+        reviews = room.setdefault("peer_reviews", {})
+        if player_id in reviews:
+            raise ValueError("Your peer review has already been submitted")
+        reviews[player_id] = {
+            "best_speaker_id": best_speaker_id,
+            "best_reasoner_id": best_reasoner_id,
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self.room_repository.save(room_id)
+        required_count = len(player_ids)
+        return {
+            "submitted": True,
+            "submitted_count": len(reviews),
+            "required_count": required_count,
+            "results_revealed": len(reviews) >= required_count,
+        }
 
     def _activate_stage(
             self,

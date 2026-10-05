@@ -1,246 +1,261 @@
 [
   {
-    "id": "banquo",
-    "name": "班柯",
-    "avatar": "assets/characters/Banquo.jpg",
-    "public_profile": "苏格兰将军，与麦克白并肩作战，功勋卓著。",
-    "private_background": "你的功勋与麦克白相当，却没有得到同等封赏。你知道女巫关于麦克白和你后代的预言，也曾在关键行动上保持沉默。你必须在麦克白与马尔康之间做出选择。",
-    "goals": [
-      "协助调查邓肯国王遇害案",
-      "防止苏格兰陷入战乱",
-      "在麦克白与马尔康之间做出最终选择"
-    ],
-    "secrets": [
-      "你知道女巫的完整预言。",
-      "你曾默许甚至暗中推动过弑君行动，但不能暴露。",
-      "你真正关心的是自己后代的命运。"
-    ],
-    "initial_information": [
-      "麦克白和你都立下战功，但只有麦克白得到爵位封赏。",
-      "马尔康与邓肯国王政见不合。",
-      "麦克德夫的某位至亲曾经发起叛乱，后来被邓肯赦免。",
-      "女巫预言麦克白将成为国王，你的子孙也将成为国王。"
-    ],
-    "relationships": [
-      {
-        "target_id": "macbeth",
-        "type": "ally_and_rival",
-        "description": "你们是并肩作战的战友，也是封赏和王位问题上的潜在竞争者。"
-      },
-      {
-        "target_id": "malcolm",
-        "type": "political_choice",
-        "description": "马尔康代表王室正统，但你不确定是否应该支持他。"
-      },
-      {
-        "target_id": "lady_macbeth",
-        "type": "dangerous_ally",
-        "description": "她知道你曾经默许行动，因此你必须提防她。"
-      }
-    ],
-    "timeline": [
-      {"time": "21:30", "description": "写下请求与邓肯密会的字条，但请求被拒。", "visibility": "private"},
-      {"time": "23:10", "description": "在走廊遇到神色诡异的麦克白并讨论女巫预言。", "visibility": "private"},
-      {"time": "00:00", "description": "以询问夜巡为由与仆人长谈，客观上为麦克白清场。", "visibility": "private"},
-      {"time": "01:00", "description": "听到异常动静但关紧房门，没有外出查看。", "visibility": "private"}
-    ]
-    
-  },
-  {
     "id": "macbeth",
-    "name": "麦克白",
+    "name": "Macbeth",
+    "tagline": "The Hero Devoured by His Own Ambition",
     "avatar": "assets/characters/Macbeth.jpg",
-    "public_profile": "苏格兰战功赫赫的将军，邓肯国王的表亲，刚刚获得考特爵士封号。",
-    "private_background": "女巫预言点燃了你的野心。你得知邓肯可能收回你的兵权后，担心自己失去地位。你与麦克白夫人共同策划了弑君行动，并亲手实施了关键部分。",
+    "public_profile": "The real murderer who killed King Duncan with his own hands.",
+    "case_background": "King Duncan of Scotland has died mysteriously in the castle of Macbeth—the general he trusted most. Was it sudden illness, or murder? On the night before Macbeth's coronation, five people who hold the fate of the kingdom gather together. You must find the truth, and decide who will wear the crown.",
+    "case_details": [
+      {"label": "Victim", "value": "King Duncan"},
+      {"label": "Crime Scene", "value": "The king was stabbed through the heart with a dagger. The blade was coated with a rare snake poison: the wound turned black and the blood would not clot."},
+      {"label": "Time of Death", "value": "Between 11 p.m. and 1 a.m."},
+      {"label": "Place", "value": "In the guest room of Macbeth's castle."}
+    ],
+    "core_rules": [
+      "Stay in character at all times.",
+      "Try to complete your public goal and secret missions. Guess other players' secret missions—and stop them.",
+      "You may lie, but only in character."
+    ],
     "goals": [
-      "主张自己是稳定政局和继承王位的最佳人选",
-      "引导众人相信女巫的预言认可你的合法性",
-      "隐藏自己在弑君案中的真实责任",
-      "在游戏结束前保护麦克白夫人"
+      "Claim that you are the best choice to steady the kingdom and inherit the throne.",
+      "Lead everyone to believe the witches' prophecy recognizes your right to be king."
     ],
     "secrets": [
-      "你是弑君行动的实际执行者。",
-      "你知道麦克白夫人参与策划并处理了现场。",
-      "你曾因封赏和兵权问题对邓肯产生强烈不满。"
+      "Hide the fact that you are Duncan's murderer.",
+      "Hide the fact that Lady Macbeth was your partner in the crime.",
+      "Find out who might be the man 'not born of woman'—and watch him carefully."
+    ],
+    "story": [
+      "You are a hero of great military fame, King Duncan's own cousin. He trusted you deeply, and not long ago gave you the title of the Thane of Cawdor.",
+      "The witches' prophecy woke up your ambition for the throne. Together with your wife, you conspired to plan and carry out the murder. After the guards were drugged and fell asleep, you stabbed the king to death with a poisoned dagger—with your own hands.",
+      "Your wife helped you fake the crime scene: she pushed the murder weapon into the hand of a drugged guard.",
+      "You are the murderer in this case. You must act like a grieving hero, and turn all suspicion toward others. You are the only person who knows all of Lady Macbeth's crimes."
     ],
     "initial_information": [
-      "麦克白和班柯都立下战功，但只有你获得爵位封赏。",
-      "马尔康与邓肯国王政见不合。",
-      "侍女玛丽是麦克白夫人的心腹。",
-      "女巫预言你将成为国王。"
-    ],
-    "relationships": [
-      {
-        "target_id": "lady_macbeth",
-        "type": "spouse_and_co_conspirator",
-        "description": "她推动了你的野心，并参与了弑君计划。"
-      },
-      {
-        "target_id": "banquo",
-        "type": "ally_and_threat",
-        "description": "你们曾是战友，但班柯可能成为揭露真相的关键人物。"
-      },
-      {
-        "target_id": "macduff",
-        "type": "political_opponent",
-        "description": "麦克德夫可能反对你继位，也可能掌握关键证据。"
-      }
+      "Macduff's close relative once started a rebellion. You and Banquo crushed it. To show a king's 'mercy' and to calm the Fife family, Duncan forgave Macduff and let him keep his title.",
+      "You and Banquo both won great battles, but only you received a new title.",
+      "Malcolm disagreed with his father Duncan about politics.",
+      "Hail, Macbeth! Future king!",
+      "You shall never be king, but your sons shall rule the land.",
+      "No man born of woman can harm Macbeth.",
+      "Macbeth shall never be defeated, until the forest of Birnam marches toward Dunsinane Hill."
     ],
     "timeline": [
-      {"time": "23:40", "description": "在东侧回廊徘徊并试探班柯的立场。", "visibility": "private"},
-      {"time": "01:00", "description": "收到夫人的信号后潜入卧室，用匕首刺死邓肯。", "visibility": "private"},
-      {"time": "01:30", "description": "因恐慌将凶器带回，夫人随后返回现场伪造证据。", "visibility": "private"},
-      {"time": "清晨", "description": "与麦克德夫发现尸体，并以复仇之名处决刚苏醒的侍卫甲。", "visibility": "private"}
+      {"phase": "Before the Murder", "time": "Before the murder", "description": "You and Banquo met three witches on the heath and heard their prophecy. Deeply shaken, you wrote a letter to your wife about it.", "visibility": "private"},
+      {"phase": "Before the Murder", "time": "After your return", "description": "After your victorious return, Banquo stayed at your castle as a guest. The prophecy began to spread through the kingdom. Then King Duncan announced he would visit your castle and stay the night.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:00", "description": "King Duncan returned to the east guest room, escorted by the royal guards—Malcolm's own men. Macbeth's soldiers guarded the outer walls.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:30", "description": "After the king left, you saw Banquo and Macduff talking. Busy with your own plan, you did not stay to listen, and soon both men went back to their rooms. A handwritten, unsent note was later found among Banquo's things: 'I, Banquo, have a matter touching the kingdom's safety. I beg a meeting at midnight in the east-wing side hall.'", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "22:30", "description": "Lady Macbeth, saying 'the king needs rest', ordered her trusted maid to bring strong poppy juice from the cellar. She mixed it into the wine sent to the king's guards. The guards drank and fell into a deep sleep.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "23:40", "description": "Torn by your inner struggle, you walked up and down the east corridor. Twenty minutes later you met Banquo, who also looked troubled. You exchanged a few words about the three weird sisters, then you went back to your room first.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "01:00", "description": "Your wife confirmed the guards were drugged and gave you the signal. You slipped into the king's bedroom and stabbed the sleeping Duncan with the poisoned dagger. You took the weapon away with you.", "visibility": "private"},
+      {"phase": "The Next Morning", "time": "Morning", "description": "Macduff, as master of ceremonies, went with you to wake the king—and found him dead. His cry woke the whole castle. An unconscious guard held a bloody dagger and was beginning to wake. Malcolm's royal guards had disappeared. A silver ring bearing the crest of the Fife family was found on the guard.", "visibility": "private"}
     ]
-    
   },
   {
     "id": "lady_macbeth",
-    "name": "麦克白夫人",
+    "name": "Lady Macbeth",
+    "tagline": "The Ambitious Woman Behind the Dagger",
     "avatar": "assets/characters/LadyMacbeth.jpg",
-    "public_profile": "麦克白的夫人，聪明、强势，积极参与宫廷事务。",
-    "private_background": "你认为麦克白过于软弱，因此推动他执行弑君计划。你以安神为名取得罂粟花汁，让侍卫昏迷，并在麦克白带回凶器后返回现场处理血迹和栽赃。",
+    "public_profile": "The accomplice in the murder of King Duncan.",
+    "case_background": "King Duncan of Scotland has died mysteriously in the castle of Macbeth—the general he trusted most. Was it sudden illness, or murder? On the night before Macbeth's coronation, five people who hold the fate of the kingdom gather together. You must find the truth, and decide who will wear the crown.",
+    "case_details": [
+      {"label": "Victim", "value": "King Duncan"},
+      {"label": "Crime Scene", "value": "The king was stabbed through the heart with a dagger. The blade was coated with a rare snake poison: the wound turned black and the blood would not clot."},
+      {"label": "Time of Death", "value": "Between 11 p.m. and 1 a.m."},
+      {"label": "Place", "value": "In the guest room of Macbeth's castle."}
+    ],
+    "core_rules": [
+      "Stay in character at all times.",
+      "Try to complete your public goal and secret missions. Guess other players' secret missions—and stop them.",
+      "You may lie, but only in character."
+    ],
     "goals": [
-      "维护麦克白的声誉",
-      "指责散布谣言和制造混乱的人",
-      "推动麦克白获得王位",
-      "隐藏你策划弑君和处理血衣的事实"
+      "Defend Macbeth's good name; accuse others of spreading rumors."
     ],
     "secrets": [
-      "弑君计划主要由你推动和策划。",
-      "你让侍女玛丽准备并送出使侍卫昏迷的酒。",
-      "你处理过案发现场，并将血迹留在自己的衣物上。",
-      "你必须提防班柯，因为他曾默许行动但立场并不稳定。"
+      "Hide the fact that the murder plan was yours—and that you pushed Macbeth to act.",
+      "Hide the 'unwashable bloodstain' on your sleeve, as well as the fact that you disposed of the blood-stained garments.",
+      "Keep track of Banquo's movements. He acquiesced to the deed, yet his position is far from trustworthy."
+    ],
+    "story": [
+      "You are Macbeth's wife, and a subject of the king. King Duncan is an honored guest under your own roof.",
+      "You have a strong desire for power and control, and a burning ambition to become queen. You think Macbeth is 'too soft', and that he needs your push.",
+      "It was you who drugged the guards.",
+      "After Macbeth killed the king and came back in a panic, it was you who calmly took the dagger back to the crime scene and framed the guard.",
+      "The king's blood stained the sleeve of your fine dress."
     ],
     "initial_information": [
-      "麦克德夫家族与王室有旧怨。",
-      "侍女玛丽是你的心腹。",
-      "班柯知道女巫预言，并可能默许了你们的行动。",
-      "麦克白的野心需要你的推动。"
-    ],
-    "relationships": [
-      {
-        "target_id": "macbeth",
-        "type": "spouse_and_co_conspirator",
-        "description": "你们共同策划弑君，但你比麦克白更加冷静和主动。"
-      },
-      {
-        "target_id": "banquo",
-        "type": "threat",
-        "description": "班柯掌握部分秘密，可能成为计划的隐患。"
-      },
-      {
-        "target_id": "macduff",
-        "type": "hidden_enemy",
-        "description": "麦克德夫可能通过侍女玛丽追查现场真相。"
-      }
+      "Macduff's close relative once started a rebellion. After it was crushed, Duncan, to show a king's 'mercy' and to calm the Fife family, forgave Macduff and let him keep his title.",
+      "Mary the handmaid is your trusted confidante.",
+      "The House of Macduff has long-standing grievances against the royal house.",
+      "Banquo knows of the prophecies and has acquiesced to your plot. He is a double-edged sword and must be handled with caution.",
+      "Hail, Macbeth! Future king!",
+      "You shall never be king, but your sons shall rule the land.",
+      "No man born of woman can harm Macbeth.",
+      "Macbeth shall never be defeated, until the forest of Birnam marches toward Dunsinane Hill."
     ],
     "timeline": [
-      {"time": "22:30", "description": "命玛丽取来罂粟花汁，亲自掺入给侍卫的酒中。", "visibility": "private"},
-      {"time": "01:00", "description": "确认侍卫昏迷，向麦克白发出行动信号。", "visibility": "private"},
-      {"time": "01:30", "description": "将匕首塞入侍卫手中并涂抹血迹，伪造现场。", "visibility": "private"},
-      {"time": "01:40", "description": "回到卧室处理沾血华服，并将其藏入衣箱。", "visibility": "private"}
+      {"phase": "Before the Murder", "time": "Before the murder", "description": "You received Macbeth's letter, telling you about the witches' prophecy.", "visibility": "private"},
+      {"phase": "Before the Murder", "time": "After their return", "description": "After the victorious return, Banquo stayed at the castle as a guest. The prophecy began to spread. Then King Duncan announced he would visit and stay the night.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:00", "description": "King Duncan returned to the east guest room, escorted by the royal guards—Malcolm's own men. Macbeth's soldiers guarded the outer walls.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:30", "description": "After the king withdrew, the nobles talked for a while. Your mind was already elsewhere—you left early.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "22:30", "description": "Saying 'the king needs rest', you ordered your trusted maid to bring strong poppy juice from the cellar. You mixed it into the wine for the king's guards with your own hands. The guards drank and fell into a deep sleep.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "01:00", "description": "You confirmed the guards were drugged and gave Macbeth the signal. He slipped into the king's bedroom and stabbed the sleeping Duncan with the poisoned dagger. In his panic, he took the weapon away with him.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "01:30", "description": "You reproved Macbeth for his fluster and went back to the crime scene yourself. When Guard A began to wake, you slipped the dagger into his hand, daubed blood on his face, and framed him as the murderer. Your sleeve was stained with blood, so you hid the dress in a chest.", "visibility": "private"},
+      {"phase": "The Next Morning", "time": "Morning", "description": "Macduff and Macbeth found Duncan dead. One guard began to wake, moaning, whereupon Macbeth swiftly 'executed' him. A silver ring bearing the crest of the House of Fife was found on his corpse.", "visibility": "private"}
     ]
-    
   },
   {
-    "id": "macduff",
-    "name": "麦克德夫",
-    "avatar": "assets/characters/Macduff.jpg",
-    "public_profile": "法夫领主，忠于苏格兰，也与王室存在复杂的历史关系。",
-    "private_background": "你的家族曾与王室发生冲突。你已经暗中与马尔康结盟，并把侍女玛丽安插在麦克白夫人身边作为眼线。你知道她曾向侍卫送酒，并怀疑戒指等物品与现场有关。",
+    "id": "banquo",
+    "name": "Banquo",
+    "tagline": "The Soul Haunted by the Prophecy",
+    "avatar": "assets/characters/Banquo.jpg",
+    "public_profile": "A loyalist of the kingdom, a general of great military fame.",
+    "case_background": "King Duncan of Scotland has died mysteriously in the castle of Macbeth—the general he trusted most. Was it sudden illness, or murder? On the night before Macbeth's coronation, five people who hold the fate of the kingdom gather together. You must find the truth, and decide who will wear the crown.",
+    "case_details": [
+      {"label": "Victim", "value": "King Duncan"},
+      {"label": "Crime Scene", "value": "The king was stabbed through the heart with a dagger. The blade was coated with a rare snake poison: the wound turned black and the blood would not clot."},
+      {"label": "Time of Death", "value": "Between 11 p.m. and 1 a.m."},
+      {"label": "Place", "value": "In the guest room of Macbeth's castle."}
+    ],
+    "core_rules": [
+      "Stay in character at all times.",
+      "Try to complete your public goal and secret missions. Guess other players' secret missions—and stop them.",
+      "You may lie, but only in character."
+    ],
     "goals": [
-      "找出弑君案的真凶",
-      "恢复王国的秩序与正义",
-      "质疑麦克白继位的合法性",
-      "与马尔康巩固盟约"
+      "Help with the investigation, and keep the kingdom from falling into civil war."
     ],
     "secrets": [
-      "侍女玛丽是你安插在麦克白家中的内应。",
-      "你与马尔康已经秘密结盟。",
-      "你必须隐藏自己‘非妇人所生’的秘密，直到关键时刻。",
-      "你与王室的旧怨可能让其他人怀疑你的动机。"
+      "Let others know that 'Macbeth and I heard the witches' prophecy together'—but make sure the words 'your sons shall be kings' are not misread.",
+      "Hide your suspicion of the murderer, and stay alive."
+    ],
+    "story": [
+      "You are a loyal general of the kingdom, and Macbeth's comrade-in-arms.",
+      "In crushing the rebellion and helping Duncan take the throne, your deeds were equal to Macbeth's—if not greater.",
+      "Yet at the victory feast, Duncan heaped titles on Macbeth alone—the new Thane of Cawdor—while your deeds received no more than a passing word of praise. His reason: 'Banquo's loyalty needs no title to prove it.'",
+      "The witches also prophesied that your descendants would be kings. This leaves you with mixed feelings—jealousy, perhaps, or fear.",
+      "On the night of the murder, you tried to send King Duncan a secret warning, but you failed."
     ],
     "initial_information": [
-      "麦克白和班柯都立下战功，但封赏存在明显差异。",
-      "马尔康与邓肯国王政见不合。",
-      "侍女玛丽是麦克白夫人的心腹，同时也是你的眼线。",
-      "你怀疑戒指等物品可能在送酒时被带入现场。"
-    ],
-    "relationships": [
-      {
-        "target_id": "malcolm",
-        "type": "secret_ally",
-        "description": "你们共同反对麦克白继位，但彼此仍有政治猜疑。"
-      },
-      {
-        "target_id": "lady_macbeth",
-        "type": "hidden_enemy",
-        "description": "你在她身边安插了眼线，试图查明她是否参与谋杀。"
-      },
-      {
-        "target_id": "macbeth",
-        "type": "suspect_and_opponent",
-        "description": "你怀疑麦克白有动机和机会成为真凶。"
-      }
+      "Macduff's close relative once started a rebellion. You and Macbeth crushed it. To show a king's 'mercy' and to calm the Fife family, Duncan forgave Macduff and let him keep his title.",
+      "You and Macbeth both won great battles, but only he received a new title.",
+      "Malcolm disagreed with his father Duncan about politics.",
+      "Hail, Macbeth! Future king!",
+      "You shall never be king, but your sons shall rule the land.",
+      "No man born of woman can harm Macbeth.",
+      "Macbeth shall never be defeated, until the forest of Birnam marches toward Dunsinane Hill."
     ],
     "timeline": [
-      {"time": "21:30", "description": "指令玛丽将法夫家族戒指放入侍卫甲行囊。", "visibility": "private"},
-      {"time": "21:50", "description": "向马尔康送出半封盟约密信。", "visibility": "private"},
-      {"time": "23:50", "description": "听到侍卫长谈论麦克白行为异常，又听见麦克白与班柯讨论女巫。", "visibility": "private"},
-      {"time": "00:10", "description": "看见马尔康与手持酒瓶的玛丽交谈。", "visibility": "private"},
-      {"time": "清晨", "description": "与麦克白发现邓肯尸体，并看到侍卫甲行囊中的家族戒指。", "visibility": "private"}
+      {"phase": "Before the Murder", "time": "Before the murder", "description": "You and Macbeth met three witches on the heath and heard their prophecy.", "visibility": "private"},
+      {"phase": "Before the Murder", "time": "After your return", "description": "After the victorious return, you stayed at Macbeth's castle as a guest. The prophecy began to spread through the kingdom. Then King Duncan announced he would visit the castle and stay the night.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:00", "description": "King Duncan returned to the east guest room, escorted by the royal guards—Malcolm's own men. Macbeth's soldiers guarded the outer walls.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:30", "description": "After the king withdrew, you tried to discuss the prophecy with Macduff. Before long, you both went back to your rooms.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:50", "description": "You began writing a secret note to King Duncan: 'I, Banquo, have a matter touching the kingdom's safety. I beg a meeting at midnight in the east-wing side hall.' Twenty minutes later, the king's guard told you: 'His Majesty is unwell and has retired for the night. He fears he cannot meet you.'", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "23:10", "description": "Your guard heard hurried pacing in Malcolm's room. Twenty minutes later you went out for a walk. In the corridor you met Macbeth, who looked strange. You exchanged a few words about the three weird sisters, and Macbeth returned to his room first.", "visibility": "private"},
+      {"phase": "The Next Morning", "time": "Morning", "description": "Macduff and Macbeth found Duncan dead. An unconscious guard held a bloody dagger and was beginning to wake. Malcolm's royal guards had disappeared. A silver ring bearing the crest of the Fife family was found on the guard.", "visibility": "private"}
     ]
-    
   },
   {
     "id": "malcolm",
-    "name": "马尔康",
+    "name": "Malcolm",
+    "tagline": "The Heir Beneath the Crumbling Wall",
     "avatar": "assets/characters/Malcolm.jpg",
-    "public_profile": "邓肯国王的长子和合法继承人，年轻但有政治抱负。",
-    "private_background": "你与父亲邓肯在政见上存在分歧。父亲遇害后，你前往英格兰集结军队，准备以柏南森林的树枝为伪装进军苏格兰。你必须洗清自己弑父的嫌疑，并争取班柯等关键人物的支持。",
+    "public_profile": "Duncan's eldest son, and the rightful heir to the throne.",
+    "case_background": "King Duncan of Scotland has died mysteriously in the castle of Macbeth—the general he trusted most. Was it sudden illness, or murder? On the night before Macbeth's coronation, five people who hold the fate of the kingdom gather together. You must find the truth, and decide who will wear the crown.",
+    "case_details": [
+      {"label": "Victim", "value": "King Duncan"},
+      {"label": "Crime Scene", "value": "The king was stabbed through the heart with a dagger. The blade was coated with a rare snake poison: the wound turned black and the blood would not clot."},
+      {"label": "Time of Death", "value": "Between 11 p.m. and 1 a.m."},
+      {"label": "Place", "value": "In the guest room of Macbeth's castle."}
+    ],
+    "core_rules": [
+      "Stay in character at all times.",
+      "Try to complete your public goal and secret missions. Guess other players' secret missions—and stop them.",
+      "You may lie, but only in character."
+    ],
     "goals": [
-      "查明父亲死亡的真相",
-      "证明自己是王位的合法继承人",
-      "阻止麦克白利用混乱局势加冕",
-      "寻找可靠盟友的支持"
+      "Find out the truth about your father's death."
     ],
     "secrets": [
-      "你曾与邓肯国王政见不合，因此可能被怀疑有弑父动机。",
-      "你已经在英格兰集结军队。",
-      "你的军队正以柏南森林的树枝为伪装向邓西嫩进军。",
-      "班柯是决定军方立场的关键人物。"
+      "Prove that you are the rightful heir to the throne.",
+      "Find allies you can rely on.",
+      "Clear yourself of the suspicion of killing your own father because of your quarrels with him."
+    ],
+    "story": [
+      "You are Duncan's eldest son, first in line to the throne.",
+      "You are a radical reformer: you think your father ruled too 'softly', while Duncan thought you 'rash and reckless', a danger to the kingdom's stability. Again and again he struck down your proposals at court, and even let slip words like 'Macbeth reminds me of my younger self' or 'Banquo's loyalty is more reassuring'. You resented every word of it.",
+      "Before the murder, to win political support, you exchanged secret letters with nobles who, like you, kept a wary eye on Macbeth.",
+      "You hold half of a secret letter.",
+      "The guard who was slain was your own man—and this puts you in a very difficult position."
     ],
     "initial_information": [
-      "麦克白和班柯功勋相当，但封赏存在差异。",
-      "麦克德夫家族曾与王室发生冲突。",
-      "邓肯国王遇害后，王位继承陷入混乱。",
-      "女巫预言中包含麦克白和你未来的命运。"
-    ],
-    "relationships": [
-      {
-        "target_id": "macduff",
-        "type": "secret_ally",
-        "description": "麦克德夫已经与你结盟，但你们需要互相确认立场。"
-      },
-      {
-        "target_id": "banquo",
-        "type": "key_supporter",
-        "description": "班柯的军方影响力可能决定王位归属。"
-      },
-      {
-        "target_id": "macbeth",
-        "type": "claimant_and_opponent",
-        "description": "麦克白是王位竞争者，也是你必须调查的主要嫌疑人。"
-      }
+      "Macduff's close relative once started a rebellion. It was crushed by Macbeth and Banquo. To show a king's 'mercy' and to calm the Fife family, Duncan forgave Macduff and let him keep his title.",
+      "Macbeth and Banquo both won great battles, but only Macbeth received a new title.",
+      "The 'army of Birnam Wood' is your last trump card.",
+      "Hail, Macbeth! Future king!",
+      "No man born of woman can harm Macbeth."
     ],
     "timeline": [
-      {"time": "21:00", "description": "你的亲卫护送邓肯回到东侧客房。", "visibility": "private"},
-      {"time": "22:00", "description": "收到麦克德夫送来的半封盟约密信。", "visibility": "private"},
-      {"time": "23:00", "description": "在房中写下对父亲强烈不满的日记。", "visibility": "private"},
-      {"time": "00:10", "description": "遇到端着酒杯和酒瓶的玛丽，她称夫人命她把酒送回地窖。", "visibility": "private"},
-      {"time": "清晨", "description": "得知父亲遇害，而你的亲卫被卷入伪造的案发现场。", "visibility": "private"}
+      {"phase": "Before the Murder", "time": "Before the murder", "description": "After Macbeth and Banquo's victorious return, Banquo stayed at the castle as a guest. The witches' prophecy began to spread. Then King Duncan announced he would visit and stay the night.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:00", "description": "King Duncan returned to the east guest room, escorted by your own royal guards. Macbeth's soldiers guarded the outer walls.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:30", "description": "After the king withdrew, you saw Banquo and Macduff talking. You gave your guards a few instructions, then went back to your room on your own. A handwritten, unsent note was later found among Banquo's things: 'I, Banquo, have a matter touching the kingdom's safety. I beg a meeting at midnight in the east-wing side hall.'", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "22:00", "description": "You received half of a secret letter from Macduff. It read: 'Your Highness, be clear-eyed: beneath the glory of the Thane of Cawdor, dark undercurrents stir. The witches' prophecy may not be groundless. Should things change, we must prepare early. My family is willing to…'", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "23:00", "description": "You thought back to your father's words at court, and in your room you wrote a diary full of resentment about your quarrels with him.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "00:10", "description": "You met a maid carrying a wine cup and a half-finished bottle toward the cellar. In a fluster, she said Lady Macbeth had ordered her to return the wine and not disturb their rest again.", "visibility": "private"},
+      {"phase": "The Next Morning", "time": "Morning", "description": "Macduff and Macbeth found Duncan dead. One of your guards began to wake, letting out an unconscious moan, whereupon Macbeth swiftly 'executed' him. A silver ring bearing the crest of the Fife family was found on his corpse.", "visibility": "private"}
     ]
-    
+  },
+  {
+    "id": "macduff",
+    "name": "Macduff",
+    "tagline": "The Watcher in the Undercurrent",
+    "avatar": "assets/characters/Macduff.jpg",
+    "public_profile": "A loyal noble of the kingdom.",
+    "case_background": "King Duncan of Scotland has died mysteriously in the castle of Macbeth—the general he trusted most. Was it sudden illness, or murder? On the night before Macbeth's coronation, five people who hold the fate of the kingdom gather together. You must find the truth, and decide who will wear the crown.",
+    "case_details": [
+      {"label": "Victim", "value": "King Duncan"},
+      {"label": "Crime Scene", "value": "The king was stabbed through the heart with a dagger. The blade was coated with a rare snake poison: the wound turned black and the blood would not clot."},
+      {"label": "Time of Death", "value": "Between 11 p.m. and 1 a.m."},
+      {"label": "Place", "value": "In the guest room of Macbeth's castle."}
+    ],
+    "core_rules": [
+      "Stay in character at all times.",
+      "Try to complete your public goal and secret missions. Guess other players' secret missions—and stop them.",
+      "You may lie, but only in character."
+    ],
+    "goals": [
+      "Find the true murderer, and restore order and justice to the kingdom."
+    ],
+    "secrets": [
+      "Hide the secret that you were 'not born of woman'—born by Caesarean section. It must not come out before the critical moment.",
+      "Clear yourself of the suspicion raised by your family's history.",
+      "Find your ally, win each other's trust, and join hands to save Scotland."
+    ],
+    "story": [
+      "You are a loyal noble—and an avenger of justice.",
+      "Years ago, your father stood against Duncan in a rebellion. It was crushed by Macbeth and Banquo, and your father was put to death by Duncan's own order.",
+      "To show a king's 'mercy' and to keep the House of Fife calm, Duncan pardoned you and let you inherit the title. Yet in your eyes, the revenge you seek for your father's death and the fear of being purged someday have never faded.",
+      "You hold half of a secret letter—one you exchanged with an important figure.",
+      "You must carefully test who is worth trusting, prove your loyalty before him, and never reveal your ultimate secret too soon."
+    ],
+    "initial_information": [
+      "Macbeth and Banquo both won great battles, but only Macbeth received a new title.",
+      "Malcolm disagreed with his father Duncan about politics.",
+      "The maid is Lady Macbeth's trusted confidante.",
+      "Hail, Macbeth! Future king!",
+      "No man born of woman can harm Macbeth.",
+      "Macbeth shall never be defeated, until the forest of Birnam marches toward Dunsinane Hill."
+    ],
+    "timeline": [
+      {"phase": "Before the Murder", "time": "Before the murder", "description": "After Macbeth and Banquo's victorious return, Banquo stayed at the castle as a guest. The witches' prophecy began to spread. Then King Duncan announced he would visit and stay the night.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:00", "description": "King Duncan returned to the east guest room, escorted by the royal guards—Malcolm's own men. Macbeth's soldiers guarded the outer walls.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:30", "description": "After the king withdrew, Banquo came to talk with you about the witches' prophecy. Before long, you both went back to your rooms. A handwritten, unsent note was later found among Banquo's things: 'I, Banquo, have a matter touching the kingdom's safety. I beg a meeting at midnight in the east-wing side hall.'", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "21:50", "description": "You sent a secret letter to the ally you hoped to win, keeping the other half in your own hand. It read: '…I watch his ambition spread like wildfire, yet His Majesty turns a blind eye. Though my family bears its shame, the survival of Scotland outweighs any private grudge. If Your Highness cares for the kingdom's future, I pledge my loyalty. Burn after reading. — M'", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "23:50", "description": "Outside your room you met the captain of the guard and heard him muttering that Macbeth had looked strange. A while later, you heard Banquo and Macbeth discussing the three weird sisters.", "visibility": "private"},
+      {"phase": "The Night of the Murder", "time": "00:10", "description": "You saw Malcolm talking with a maid. The maid seemed to be holding a half-finished bottle of wine.", "visibility": "private"},
+      {"phase": "The Next Morning", "time": "Morning", "description": "As master of ceremonies, you went with Macbeth to wake the king and found him dead. Macbeth 'executed' the waking guard. A silver ring bearing your family's crest was found on the guard; you had once given it to him as a reward for his service in battle.", "visibility": "private"}
+    ]
   }
 ]

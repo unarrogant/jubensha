@@ -1,48 +1,48 @@
 [
   {
     "id": "waiting",
-    "name": "等待玩家",
+    "name": "Waiting for Players",
     "order": 1,
     "duration_seconds": 0,
-    "description": "房主创建房间，玩家加入并等待所有角色准备完成。",
+    "description": "Players join the room and wait until the full cast is ready.",
     "allowed_actions": ["join_room", "select_character", "ready"],
     "next_stage": "role_selection",
     "manual_transition": true,
-    "agent_instructions": "不要开始主持剧情，只确认玩家人数和准备状态。"
+    "agent_instructions": "Do not begin the story. Only confirm the player count and readiness state."
   },
   {
     "id": "role_selection",
-    "name": "角色选择",
+    "name": "Role Assignment",
     "order": 2,
     "duration_seconds": 0,
-    "description": "五名玩家分别选择一个角色，角色不能重复。",
+    "description": "Each of the five players receives a unique character.",
     "allowed_actions": ["select_character", "view_public_profile", "ready"],
     "next_stage": "intro",
     "manual_transition": true,
-    "agent_instructions": "确认每名玩家都已选定角色，不得泄露角色的私密信息。"
+    "agent_instructions": "Confirm that every player has a character. Never reveal private character information."
   },
   {
     "id": "intro",
     "event_stage": "INTRO",
-    "name": "角色自我介绍",
+    "name": "Character Introductions",
     "order": 3,
-    "duration_seconds": 120,
-    "description": "主持人用沉浸式开场白介绍案情，玩家依次完成角色自我介绍。",
-    "fallback_message": "夜色笼罩着麦克白城堡，邓肯国王却再也没能从客房醒来。王冠、预言与各自隐瞒的秘密，将五位在场者困在同一场疑云之中。请麦克白、麦克白夫人、班柯、马尔康和麦克德夫依次介绍自己的公开身份；不要透露角色卡中的秘密内容。",
+    "duration_seconds": 10,
+    "description": "The host opens the case, then each player introduces only their public identity in character.",
+    "fallback_message": "I am the Watcher of Dunsinane, your host for this game. I witnessed everything that unfolded within these walls that night. My task is to guide your investigation as you uncover the truth for yourselves, but I will reveal only what your questions and deductions earn. King Duncan entered Macbeth's castle beneath a royal banner, yet he never woke from the eastern guest chamber. Macbeth, Lady Macbeth, Banquo, Malcolm, and Macduff: introduce your public identities in that order, and keep every secret on your character card concealed. You may question me privately in English whenever you need guidance.",
     "allowed_actions": ["speak", "view_character_card", "private_character_query"],
     "forbidden_actions": ["enter_location", "inspect_object", "submit_reasoning", "send_clue"],
     "initial_clue_release": null,
     "next_stage": "investigation",
     "manual_transition": false,
-    "agent_instructions": "发送 STAGE_CHANGE(INTRO) 和 TIMER(120)。用四至六句沉浸式主持词回顾案情，引导玩家按麦克白、麦克白夫人、班柯、马尔康、麦克德夫的顺序自我介绍。不得发放任何线索。"
+    "agent_instructions": "Announce the introduction stage and its 120-second limit. Introduce yourself as the Watcher of Dunsinane, the host of this game. State that you witnessed everything that unfolded within the castle that night and that your task is to guide the players as they uncover the truth for themselves. Set the scene in four to six atmospheric English sentences. Ask Macbeth, Lady Macbeth, Banquo, Malcolm, and Macduff to introduce their public identities in that order. Remind players that they may question the host privately in English. Do not release clues."
   },
   {
     "id": "investigation",
     "event_stage": "INVESTIGATION",
-    "name": "自由调查搜证",
+    "name": "Investigation",
     "order": 4,
-    "duration_seconds": 300,
-    "description": "玩家在唯一一轮搜证中选择地点、检查物品，也可以提交推理解锁闯关线索。",
+    "duration_seconds": 10,
+    "description": "Search one of the available locations, inspect objects, and submit deductions to unlock deeper evidence.",
     "allowed_actions": ["speak", "view_clue", "enter_location", "inspect_object", "share_clue", "submit_reasoning", "private_character_query"],
     "forbidden_actions": ["vote"],
     "initial_clue_release": {
@@ -55,48 +55,48 @@
     },
     "next_stage": "discussion",
     "manual_transition": false,
-    "agent_instructions": "发送 STAGE_CHANGE(INVESTIGATION) 和 TIMER(300)，先向所有玩家随机发放一张不属于地点搜证、也不属于推理解锁的一级线索卡。公共主持词用自然叙述提示案发现场、麦克白房间、马尔康房间、班柯房间和麦克德夫房间可以搜查，并提醒玩家可以向主持人提交推理。具体玩家去了哪里、检查了什么、发现了什么只能通过 PRIVATE_MESSAGE 告知本人。"
+    "agent_instructions": "Announce the investigation stage and its 300-second limit. One opening clue is released by the backend. In natural English prose, identify the Crime Scene, Macbeth's Room, Malcolm's Room, Banquo's Room, and Macduff's Room as searchable locations. Remind players to privately ask the host in English to enter a location, inspect an object, or submit a deduction. A qualifying deduction may unlock evidence. Never reveal a player's private actions publicly."
   },
   {
     "id": "discussion",
     "event_stage": "DISCUSSION",
-    "name": "集中讨论推理",
+    "name": "Discussion and Deduction",
     "order": 5,
-    "duration_seconds": 180,
-    "description": "玩家分享已获得的线索并集中推理，不能再搜查地点。",
+    "duration_seconds": 10,
+    "description": "Share evidence and challenge one another's theories. Location searches are now closed.",
     "allowed_actions": ["speak", "view_clue", "share_clue", "submit_reasoning", "accuse", "private_character_query"],
     "forbidden_actions": ["enter_location", "inspect_object", "send_level_one_clue", "vote"],
     "initial_clue_release": null,
     "next_stage": "voting",
     "manual_transition": false,
-    "agent_instructions": "发送 STAGE_CHANGE(DISCUSSION) 和 TIMER(180)。禁止地点搜查和一级线索发放；玩家满足推理条件时仍可私密发放 clue 5、6、11、12，讨论后期可酌情广播 clue 8。"
+    "agent_instructions": "Announce the discussion stage and its 180-second limit. Location searches and new level-one clues are forbidden. Remind players to discuss in English and privately question the host or submit deductions in English. Qualifying deductions may still unlock clues 5, 6, 11, or 12; clue 8 may be released late in the discussion when appropriate."
   },
   {
     "id": "voting",
     "event_stage": "VOTING",
-    "name": "投票指认凶手",
+    "name": "Final Accusation",
     "order": 6,
-    "duration_seconds": 60,
-    "description": "每名玩家投出唯一一票，系统统计票型。",
+    "duration_seconds": 10,
+    "description": "Each player casts one final vote for the suspected killer.",
     "allowed_actions": ["vote", "private_character_query"],
     "forbidden_actions": ["enter_location", "inspect_object", "submit_reasoning", "send_clue"],
     "initial_clue_release": null,
     "next_stage": "ending",
     "manual_transition": false,
-    "agent_instructions": "发送 STAGE_CHANGE(VOTING) 和 START_VOTE(60)。不得搜查、推理或发放任何新线索。"
+    "agent_instructions": "Announce the 60-second final accusation. Ask every player to cast exactly one vote. Searching, new deductions, and new clues are forbidden. Players may privately ask about the voting procedure in English, but no new evidence will be provided."
   },
   {
     "id": "ending",
     "event_stage": "ENDING",
-    "name": "揭示真相",
+    "name": "The Final Reveal",
     "order": 7,
     "duration_seconds": 0,
-    "description": "主持人根据投票结果还原完整时间线，公布秘密、真相和对应结局。",
+    "description": "The host reconstructs the full timeline and reveals the truth, the vote, and every character's fate.",
     "allowed_actions": ["view_clue", "speak"],
     "forbidden_actions": ["enter_location", "inspect_object", "submit_reasoning", "send_clue", "vote"],
     "initial_clue_release": null,
     "next_stage": null,
     "manual_transition": true,
-    "agent_instructions": "发送 STAGE_CHANGE(ENDING) 和 GAME_END。按麦克白的动机、麦克白夫人的策划、班柯的默许、麦克德夫的秘密和女巫预言依次复盘。"
+    "agent_instructions": "Announce the final reveal and ask players to listen. Reconstruct the case in fluent narrative English, covering Macbeth's motive, Lady Macbeth's planning, Banquo's silence, Macduff's secret, the witches' prophecy, the vote, and the fate of every major character."
   }
 ]

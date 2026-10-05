@@ -94,7 +94,7 @@ def test_investigation_location_and_object_are_stage_bound(room, bundle):
 
     repeated = service.inspect_object("ROOM1", "PLAYER1", "crime_scene", "壁炉灰烬")
     assert repeated["clue_id"] is None
-    assert "已经被" in repeated["message"]
+    assert "already been searched" in repeated["message"]
 
 
 def test_ambient_location_never_releases_clue(room, bundle):
@@ -103,7 +103,7 @@ def test_ambient_location_never_releases_clue(room, bundle):
 
     result = service.inspect_object("ROOM1", "PLAYER1", "hall", "墙壁")
     assert result["clue_id"] is None
-    assert result["message"] == "没有更多发现。"
+    assert result["message"] == "You find nothing more."
 
 
 def test_reasoning_rule_is_idempotent(room, bundle):

@@ -1,4 +1,5 @@
 from datetime import datetime,timezone
+import re
 from uuid import uuid4
 
 from app.repositories.room_repository import RoomRepository
@@ -12,6 +13,20 @@ class MessageService:
     ):
         self.room_repository=room_repository
         self.bundle_loader=bundle_loader
+
+    @staticmethod
+    def is_english_message(content: str) -> bool:
+        """Accept an English prompt and reject CJK or letterless input."""
+        clean_content = content.strip()
+        if not clean_content:
+            return False
+
+        contains_cjk = re.search(
+            r"[\u3400-\u4dbf\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]",
+            clean_content,
+        )
+        contains_latin_word = re.search(r"[A-Za-z]{2,}", clean_content)
+        return contains_cjk is None and contains_latin_word is not None
 
     @staticmethod
     def _get_player(

@@ -11,13 +11,14 @@ import {
   Users,
   X,
 } from "@lucide/vue";
-import { getAdminRoom, getAdminRooms } from "../services/api";
+import { getAdminAgentAudit, getAdminRoom, getAdminRooms } from "../services/api";
 
 const router = useRouter();
 const token = localStorage.getItem("script_kill_admin_token");
 const adminName = localStorage.getItem("script_kill_admin_username") || "管理员";
 const rooms = ref([]);
 const selectedRoom = ref(null);
+const roomAudit = ref({ entries: [], peer_reviews: {} });
 const selectedRoomId = ref("");
 const loading = ref(true);
 const detailLoading = ref(false);
@@ -89,30 +90,57 @@ async function loadRooms({ quiet = false } = {}) {
   }
 }
 
-async function selectRoom(roomId) {
+async function selectRoom(roomId, { quiet = false } = {}) {
   selectedRoomId.value = roomId;
-  selectedRoom.value = null;
-  detailLoading.value = true;
+  if (!quiet) {
+    selectedRoom.value = null;
+    roomAudit.value = { entries: [], peer_reviews: {} };
+    detailLoading.value = true;
+  }
   errorMessage.value = "";
   try {
-    selectedRoom.value = await getAdminRoom(roomId, token);
+    const [roomDetail, audit] = await Promise.all([
+      getAdminRoom(roomId, token),
+      getAdminAgentAudit(roomId, token),
+    ]);
+    selectedRoom.value = roomDetail;
+    roomAudit.value = audit;
   } catch (error) {
     if (isUnauthorized(error)) return signOut();
     errorMessage.value = error.message || "房间详情加载失败";
   } finally {
-    detailLoading.value = false;
+    if (!quiet) detailLoading.value = false;
   }
 }
 
 function closeDetail() {
   selectedRoomId.value = "";
   selectedRoom.value = null;
+  roomAudit.value = { entries: [], peer_reviews: {} };
+}
+
+function peerReviewRows(room) {
+  const players = Object.fromEntries(roomPlayers(room).map((player) => [player.id, player.name]));
+  return Object.entries(roomAudit.value.peer_reviews || {}).map(([voterId, review]) => ({
+    voter: players[voterId] || voterId,
+    bestSpeaker: players[review.best_speaker_id] || review.best_speaker_id,
+    bestReasoner: players[review.best_reasoner_id] || review.best_reasoner_id,
+  }));
+}
+
+function toolDataText(entry) {
+  const data = entry?.tool_data;
+  if (!data || typeof data !== "object" || !Object.keys(data).length) return "";
+  return JSON.stringify(data, null, 2);
 }
 
 onMounted(() => {
   if (!token) return router.replace("/admin/login");
   loadRooms();
-  refreshTimer = window.setInterval(() => loadRooms({ quiet: true }), 5000);
+  refreshTimer = window.setInterval(async () => {
+    await loadRooms({ quiet: true });
+    if (selectedRoomId.value) await selectRoom(selectedRoomId.value, { quiet: true });
+  }, 5000);
 });
 
 onBeforeUnmount(() => {
@@ -201,6 +229,30 @@ onBeforeUnmount(() => {
               <div><span>投票</span><strong>{{ roomVotes(selectedRoom).length }}</strong></div>
               <div><span>公共线索</span><strong>{{ selectedRoom.game?.public_clue_ids?.length || selectedRoom.public_clue_ids?.length || 0 }}</strong></div>
             </div>
+            <div class="detail-section admin-audit-section">
+              <h3>Agent 问答审计 <span>{{ roomAudit.entries.length }}</span></h3>
+              <div v-if="roomAudit.entries.length" class="agent-audit-list">
+                <article v-for="entry in [...roomAudit.entries].reverse()" :key="entry.id" class="agent-audit-item">
+                  <div class="agent-audit-meta"><strong>{{ entry.player_name || entry.player_id }}</strong><small>{{ formatDate(entry.created_at) }}</small></div>
+                  <p><b>玩家提问：</b> {{ entry.question }}</p>
+                  <p><b>AI 回答：</b> {{ entry.answer }}</p>
+                  <small v-if="entry.tool_used" class="agent-tool-badge">调用工具：{{ entry.tool_name || "未知工具" }} · {{ entry.tool_status || "completed" }}</small>
+                  <small v-else class="agent-tool-badge muted">未调用工具</small>
+                  <small v-if="entry.clue_ids?.length" class="agent-tool-badge">发放线索：{{ entry.clue_ids.join(", ") }}</small>
+                  <details v-if="toolDataText(entry)" class="audit-tool-data"><summary>查看工具返回数据</summary><pre>{{ toolDataText(entry) }}</pre></details>
+                </article>
+              </div>
+              <p v-else class="detail-muted">还没有玩家向 AI 主持人提问。</p>
+            </div>
+            <div class="detail-section admin-audit-section">
+              <h3>同伴互评 <span>{{ peerReviewRows(selectedRoom).length }} / {{ roomPlayers(selectedRoom).length }}</span></h3>
+              <div v-if="peerReviewRows(selectedRoom).length" class="peer-review-audit-list">
+                <div v-for="row in peerReviewRows(selectedRoom)" :key="row.voter">
+                  <strong>{{ row.voter }}</strong><small>最佳发言者：{{ row.bestSpeaker }} · 最佳推理者：{{ row.bestReasoner }}</small>
+                </div>
+              </div>
+              <p v-else class="detail-muted">尚未收到同伴互评。</p>
+            </div>
             <details class="raw-snapshot"><summary>查看原始快照</summary><pre>{{ JSON.stringify(selectedRoom, null, 2) }}</pre></details>
           </template>
           <div v-else class="admin-detail-placeholder"><Database :size="23" /><strong>选择一个房间</strong><span>右侧显示完整运行快照</span></div>
@@ -276,6 +328,20 @@ onBeforeUnmount(() => {
 .raw-snapshot { border-top: 1px solid var(--line); padding-top: 12px; }
 .raw-snapshot summary { color: var(--green); cursor: pointer; font-size: 10px; font-weight: 700; }
 .raw-snapshot pre { max-height: 260px; overflow: auto; margin: 10px 0 0; padding: 10px; color: #4e5a52; background: #f4f6f4; font-size: 9px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-audit-list, .peer-review-audit-list { display: grid; gap: 8px; max-height: 420px; overflow: auto; }
+.agent-audit-item { padding: 10px; background: #f6f8f6; border-left: 2px solid var(--green); }
+.agent-audit-meta { display: flex; justify-content: space-between; gap: 8px; }
+.agent-audit-meta strong { font-size: 10px; }
+.agent-audit-meta small { color: var(--muted); font-size: 9px; }
+.agent-audit-item p { margin: 7px 0 0; color: #536057; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.agent-tool-badge { display: inline-block; margin-top: 7px; padding: 3px 5px; color: #315e43; background: #e4f0e7; font-size: 9px; }
+.agent-tool-badge.muted { color: var(--muted); background: #edf0ee; }
+.audit-tool-data { margin-top: 8px; color: var(--muted); font-size: 9px; }
+.audit-tool-data summary { cursor: pointer; font-weight: 700; }
+.audit-tool-data pre { max-height: 150px; overflow: auto; margin: 7px 0 0; padding: 8px; color: #4e5a52; background: #edf1ee; white-space: pre-wrap; overflow-wrap: anywhere; }
+.peer-review-audit-list > div { display: flex; justify-content: space-between; gap: 8px; padding: 8px; background: #f6f8f6; }
+.peer-review-audit-list strong { font-size: 10px; }
+.peer-review-audit-list small { color: var(--muted); font-size: 9px; text-align: right; }
 .admin-detail-placeholder { min-height: 385px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: var(--faint); text-align: center; }
 .admin-detail-placeholder strong { color: var(--muted); font-size: 12px; }
 .admin-detail-placeholder span { font-size: 10px; }

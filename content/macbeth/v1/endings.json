@@ -1,114 +1,69 @@
 [
   {
     "id": "ending_banquo_accused",
-    "trigger": {
-      "type": "vote",
-      "suspect_id": "banquo"
-    },
-    "title": "沉默者的末路",
+    "trigger": {"type": "vote", "suspect_id": "banquo"},
+    "title": "The Silent Man's Fall",
     "winner": "macbeth",
-    "narrative": "班柯无法承受众人的指控与屈辱，最终选择自杀。麦克白趁乱加冕，麦克德夫试图劝说马尔康起兵，却最终战败。",
+    "narrative": "Unable to bear the accusation and disgrace, Banquo takes his own life. Macbeth uses the chaos to claim the crown. Macduff urges Malcolm to resist, but their rising ends in defeat.",
     "truth_reveal": [
-      "班柯知道女巫预言。",
-      "班柯在案发前与仆人长时间交谈，客观上为麦克白清场。",
-      "班柯听到异常动静后选择留在房中，没有阻止谋杀。"
+      "Banquo knew the witches' complete prophecy.",
+      "By detaining a servant near midnight, Banquo cleared Macbeth's route to Duncan's chamber.",
+      "Banquo heard signs of danger but remained behind his locked door and did not stop the murder."
     ],
-    "character_fates": {
-      "banquo": "被指认为真凶并自杀",
-      "macbeth": "加冕为王",
-      "lady_macbeth": "继续掌握宫廷权力",
-      "macduff": "起兵失败",
-      "malcolm": "失去夺回王位的机会"
-    }
+    "character_fates": {"banquo": "Accused of the murder, Banquo dies by suicide.", "macbeth": "Macbeth is crowned king.", "lady_macbeth": "Lady Macbeth retains power at court.", "macduff": "Macduff's rebellion is defeated.", "malcolm": "Malcolm loses his opportunity to reclaim the crown."}
   },
   {
     "id": "ending_macbeth_accused",
-    "trigger": {
-      "type": "vote",
-      "suspect_id": "macbeth"
-    },
-    "title": "血色王冠",
+    "trigger": {"type": "vote", "suspect_id": "macbeth"},
+    "title": "The Bloodstained Crown",
     "winner": "macduff",
-    "narrative": "麦克德夫揭开了麦克白的野心与弑君真相。他劝说马尔康起兵，并亲手杀死麦克白为家人和王国复仇。麦克白夫人因精神崩溃自杀，马尔康成为新王。",
+    "narrative": "Macduff exposes Macbeth's ambition and the truth of Duncan's murder. He rallies Malcolm's cause and kills Macbeth. Lady Macbeth takes her own life after her mind collapses beneath the weight of guilt, and Malcolm becomes king.",
     "truth_reveal": [
-      "邓肯密诏暴露了麦克白失去兵权的现实动机。",
-      "麦克白亲手用涂毒的匕首刺死了邓肯。",
-      "麦克白夫人负责下药、发出行动信号并伪造侍卫行凶现场。",
-      "班柯知道部分计划，却选择保持沉默。"
+      "Duncan's secret order gave Macbeth an urgent motive: he was about to lose his military command.",
+      "Macbeth entered Duncan's chamber and stabbed him with a dagger.",
+      "Lady Macbeth drugged the guards, gave the signal, and staged the scene to blame them.",
+      "Banquo knew enough to suspect the plan but chose silence."
     ],
-    "character_fates": {
-      "banquo": "暂时避免被杀，但必须面对自己的沉默",
-      "macbeth": "被麦克德夫杀死",
-      "lady_macbeth": "因精神崩溃自杀",
-      "macduff": "成为揭露真相和复仇的关键人物",
-      "malcolm": "成为苏格兰新王"
-    }
+    "character_fates": {"banquo": "Banquo survives but must answer for his silence.", "macbeth": "Macbeth is killed by Macduff.", "lady_macbeth": "Lady Macbeth dies by suicide after a mental collapse.", "macduff": "Macduff becomes the central figure in exposing and avenging the murder.", "malcolm": "Malcolm becomes King of Scotland."}
   },
   {
     "id": "ending_lady_macbeth_accused",
-    "trigger": {
-      "type": "vote",
-      "suspect_id": "lady_macbeth"
-    },
-    "title": "操纵王冠的人",
+    "trigger": {"type": "vote", "suspect_id": "lady_macbeth"},
+    "title": "The Hand Behind the Crown",
     "winner": "macduff",
-    "narrative": "众人认定麦克白夫人才是弑君计划的策划者。真相最终指向麦克白夫妇共同的罪行，麦克德夫杀死麦克白，麦克白夫人因精神崩溃自杀，马尔康继承王位。",
+    "narrative": "The accusation identifies Lady Macbeth as the architect of the regicide. The full truth reveals the shared guilt of Macbeth and his wife. Macduff kills Macbeth, Lady Macbeth dies after her mind breaks under guilt, and Malcolm inherits the crown.",
     "truth_reveal": [
-      "麦克白夫人以安神为名取得罂粟花汁。",
-      "她亲自将毒药掺入侍卫的酒中。",
-      "她将匕首塞回侍卫手中，并把血抹在侍卫脸上。",
-      "她的华服袖口留下了无法洗净的血迹。"
+      "Lady Macbeth obtained poppy extract under the pretense that it was a sleeping draught.",
+      "She mixed the drug into the guards' wine.",
+      "She returned the daggers to the guards' hands and smeared Duncan's blood over them.",
+      "Blood remained on the cuffs of her formal gown despite repeated washing."
     ],
-    "character_fates": {
-      "banquo": "避免被杀，但仍背负默许行动的秘密",
-      "macbeth": "被麦克德夫杀死",
-      "lady_macbeth": "真相败露后精神崩溃自杀",
-      "macduff": "协助马尔康恢复王国秩序",
-      "malcolm": "成为苏格兰新王"
-    }
+    "character_fates": {"banquo": "Banquo survives but carries the burden of having remained silent.", "macbeth": "Macbeth is killed by Macduff.", "lady_macbeth": "Lady Macbeth dies by suicide after her guilt is exposed.", "macduff": "Macduff helps Malcolm restore order to Scotland.", "malcolm": "Malcolm becomes King of Scotland."}
   },
   {
     "id": "ending_macduff_accused",
-    "trigger": {
-      "type": "vote",
-      "suspect_id": "macduff"
-    },
-    "title": "被旧怨吞噬的王国",
+    "trigger": {"type": "vote", "suspect_id": "macduff"},
+    "title": "A Kingdom Consumed by Old Grievances",
     "winner": "macbeth",
-    "narrative": "麦克德夫家族与王室的旧怨被视为最强动机。马尔康担心受到牵连而流亡英格兰，麦克白顺势加冕，麦克白夫人成为摄政王后。麦克德夫全家被屠杀，班柯也遭到暗杀。",
+    "narrative": "Macduff's family grievance is mistaken for the strongest motive. Malcolm flees to England, Macbeth claims the crown, and Lady Macbeth rules beside him. Macduff's household is destroyed, and Banquo is later murdered.",
     "truth_reveal": [
-      "麦克德夫确实与马尔康秘密结盟，但不是弑君者。",
-      "侍女玛丽是麦克德夫安插在麦克白夫人身边的眼线。",
-      "法夫家族戒指是麦克德夫提前放入侍卫行囊的政治棋子。"
+      "Macduff did form a secret alliance with Malcolm, but he did not kill Duncan.",
+      "Mary was Macduff's informant inside Lady Macbeth's household.",
+      "Macduff arranged for a Fife family ring to be planted in the guard's baggage as a political maneuver."
     ],
-    "character_fates": {
-      "banquo": "被麦克白势力暗杀",
-      "macbeth": "加冕为王",
-      "lady_macbeth": "成为摄政王后",
-      "macduff": "被指认为真凶，家族遭到屠杀",
-      "malcolm": "流亡英格兰"
-    }
+    "character_fates": {"banquo": "Banquo is assassinated by Macbeth's agents.", "macbeth": "Macbeth is crowned king.", "lady_macbeth": "Lady Macbeth becomes queen and regent.", "macduff": "Macduff is falsely condemned, and his household is slaughtered.", "malcolm": "Malcolm lives in exile in England."}
   },
   {
     "id": "ending_malcolm_accused",
-    "trigger": {
-      "type": "vote",
-      "suspect_id": "malcolm"
-    },
-    "title": "失去继承权的王子",
+    "trigger": {"type": "vote", "suspect_id": "malcolm"},
+    "title": "The Disinherited Prince",
     "winner": "macbeth",
-    "narrative": "马尔康与父亲的矛盾、他的亲卫卷入案发现场，使众人相信他有弑父动机。麦克白加冕，麦克白夫人成为摄政王后，马尔康被麦克白指控并处死，麦克德夫全家被屠杀，班柯也遭到暗杀。",
+    "narrative": "Malcolm's conflict with his father and the evidence implicating his guard convince the court that he committed parricide. Macbeth takes the crown, Malcolm is executed, Macduff's household is destroyed, and Banquo is assassinated.",
     "truth_reveal": [
-      "马尔康确实与邓肯存在政见冲突，但他正在英格兰集结军队。",
-      "马尔康的亲卫被麦克白夫人利用来伪造现场。",
-      "马尔康是迷药事件的直接目击者，却没有足够证据阻止谋杀。"
+      "Malcolm did quarrel with Duncan, but he was preparing support in England rather than planning murder.",
+      "Lady Macbeth used Malcolm's personal guard as part of the staged scene.",
+      "Malcolm witnessed Mary carrying the drugged wine but lacked enough evidence to stop the crime."
     ],
-    "character_fates": {
-      "banquo": "被麦克白势力暗杀",
-      "macbeth": "加冕为王",
-      "lady_macbeth": "成为摄政王后",
-      "macduff": "家族遭到屠杀",
-      "malcolm": "被麦克白指控并处死"
-    }
+    "character_fates": {"banquo": "Banquo is assassinated by Macbeth's agents.", "macbeth": "Macbeth is crowned king.", "lady_macbeth": "Lady Macbeth becomes queen and regent.", "macduff": "Macduff's household is slaughtered.", "malcolm": "Malcolm is accused and executed by Macbeth."}
   }
 ]

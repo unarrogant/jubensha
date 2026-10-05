@@ -38,3 +38,28 @@ class VoteStatus(BaseModel):
     vote_count: int
     required_votes: int
     candidates: list[dict[str, str | None]] = Field(default_factory=list)
+
+
+class PeerReviewCreate(BaseModel):
+    player_id: str = Field(min_length=1)
+    best_speaker_id: str = Field(min_length=1)
+    best_reasoner_id: str = Field(min_length=1)
+
+
+class PeerReviewStatus(BaseModel):
+    has_submitted: bool
+    submitted_count: int
+    required_count: int
+    best_speaker_id: str | None = None
+    best_reasoner_id: str | None = None
+    candidates: list[dict[str, str | None]] = Field(default_factory=list)
+    results_revealed: bool = False
+    best_speakers: list[dict[str, str | int | None]] = Field(default_factory=list)
+    best_reasoners: list[dict[str, str | int | None]] = Field(default_factory=list)
+
+
+class PeerReviewResponse(BaseModel):
+    submitted: bool
+    submitted_count: int
+    required_count: int
+    results_revealed: bool

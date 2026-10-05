@@ -8,7 +8,15 @@ from app.schemas.players import PlayerJoin,PlayerJoinResponse,PlayerListItem,Cha
 from app.services.role_service import RoleService
 from app.services.script_bundle import ScriptBundleLoader
 from app.services.game_service import GameService
-from app.schemas.game import GameStatePublic,VoteCreate,VoteResponse,VoteStatus
+from app.schemas.game import (
+    GameStatePublic,
+    PeerReviewCreate,
+    PeerReviewResponse,
+    PeerReviewStatus,
+    VoteCreate,
+    VoteResponse,
+    VoteStatus,
+)
 from app.schemas.investigation import EnterLocationRequest,InspectObjectRequest,InvestigationMessage
 from app.services.investigation_service import InvestigationService
 from app.schemas.clue import CluePublic
@@ -453,7 +461,12 @@ async def get_my_character(
 
     for character in bundle["characters"]:
         if character.get("id")==character_id:
-            return character
+            character_private = dict(character)
+            character_private["vocabulary"] = bundle.get(
+                "vocabulary",
+                {},
+            ).get(character_id, [])
+            return character_private
 
     raise HTTPException(
         status_code=404,
@@ -539,6 +552,47 @@ async def cast_vote(room_id:str, data:VoteCreate):
             status_code=400,
             detail=str(error),
         ) from error
+
+
+@router.get(
+    "/{room_id}/peer-review",
+    response_model=PeerReviewStatus,
+)
+async def get_peer_review_status(room_id: str, player_id: str):
+    try:
+        return game_service.get_peer_review_status(room_id, player_id)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post(
+    "/{room_id}/peer-review",
+    response_model=PeerReviewResponse,
+)
+async def submit_peer_review(room_id: str, data: PeerReviewCreate):
+    try:
+        result = game_service.submit_peer_review(
+            room_id=room_id,
+            player_id=data.player_id,
+            best_speaker_id=data.best_speaker_id,
+            best_reasoner_id=data.best_reasoner_id,
+        )
+        await connection_manager.broadcast_room(
+            room_id=room_id,
+            event={
+                "type": "PEER_REVIEW_UPDATED",
+                "submitted_count": result["submitted_count"],
+                "required_count": result["required_count"],
+                "results_revealed": result["results_revealed"],
+            },
+        )
+        return result
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @router.post(

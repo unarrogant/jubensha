@@ -135,10 +135,14 @@ def build_dm_graph(checkpointer=None, tools=None):
         # 被 render 节点误认为是本次请求的结果。
         return {
             "tool_result": {
+                "name": None,
                 "visibility": "private",
                 "content": None,
                 "clue_ids": [],
-            }
+                "status": None,
+                "data": {},
+            },
+            "tool_called_this_turn": False,
         }
 
     def decide_node(state: DMState) -> dict:
@@ -146,6 +150,11 @@ def build_dm_graph(checkpointer=None, tools=None):
         context = state.get("context", {})
         system_prompt = context.get("DM_SYSTEM", "")
         is_public_event = state.get("request_type") == "public_event"
+        language_rule = (
+            "\nAll player-facing output must be fluent English only. "
+            "Never answer in Chinese and never mix Chinese into the response. "
+            "Keep the tone immersive, restrained, and natural."
+        )
 
         full_messages = list(state.get("messages", []))
         history_summary = state.get("history_summary", "")
@@ -168,6 +177,7 @@ def build_dm_graph(checkpointer=None, tools=None):
                 SystemMessage(
                     content=(
                         f"{system_prompt}\n\n"
+                        f"{language_rule}\n\n"
                         "以下是该线程较早对话的压缩摘要，只能作为历史参考；"
                         "当前阶段和线索以本次上下文为准：\n"
                         f"{history_summary}"
@@ -176,7 +186,18 @@ def build_dm_graph(checkpointer=None, tools=None):
                 *recent_messages,
             ]
         else:
-            messages = full_messages
+            messages = (
+                [
+                    SystemMessage(content=system_prompt + language_rule),
+                    *[
+                        message
+                        for message in full_messages
+                        if getattr(message, "type", "") != "system"
+                    ],
+                ]
+                if full_messages
+                else []
+            )
 
         model_context = {
             key: value
@@ -209,6 +230,10 @@ def build_dm_graph(checkpointer=None, tools=None):
                 behavior_prompt = (
                     "\n你正在向全体玩家发布阶段主持词。"
                     "必须依据 CURRENT_STAGE 的名称、描述和 agent_instructions，"
+                    "如果 CURRENT_STAGE.id 是 intro，先用一句自然的话介绍自己是本局的 AI 主持人；"
+                    "其他阶段不要重复自我介绍，直接宣布当前阶段。"
+                    "每个阶段都要明确告诉玩家：可以在私聊框向主持人提问；主持人会依据剧本回应，"
+                    "并在满足条件时提供线索，但不要承诺每次提问都会得到线索。"
                     "先明确宣布当前阶段，再用四至六句有画面感的自然叙述"
                     "说明本阶段目标、时间与限制。语气沉浸、克制而有悬念，"
                     "不要使用项目符号，不要输出 JSON、事件名或系统字段，"
@@ -218,7 +243,7 @@ def build_dm_graph(checkpointer=None, tools=None):
                 )
                 if (state.get("event_payload") or {}).get("stage_id") == "ending":
                     behavior_prompt += (
-                        "\n结局复盘必须写成连续、完整的中文主持人口述，不得使用项目符号、编号、"
+                        "\n结局复盘必须写成连续、完整、自然的英文主持人口述，不得使用项目符号、编号、"
                         "Markdown 加粗、分栏标题、字段名、JSON 或英文内部标记。请按时间顺序还原 "
                         "EVENT_PAYLOAD.ending 中的案件经过，交代人物动机、关键行动、现场如何被伪造、"
                         "调查如何揭开真相，以及投票之后发生的结局。必须覆盖 truth_reveal 中的全部事实，"
@@ -230,7 +255,7 @@ def build_dm_graph(checkpointer=None, tools=None):
 
             messages = [
                 SystemMessage(
-                    content=system_prompt + behavior_prompt
+                    content=system_prompt + language_rule + behavior_prompt
                 ),
                 HumanMessage(
                     content=request_content,
@@ -242,7 +267,7 @@ def build_dm_graph(checkpointer=None, tools=None):
             messages.append(
                 HumanMessage(
                     content=(
-                        "请把刚才工具返回的结果改写成自然、沉浸式的主持人回复。"
+                        "Rewrite the tool result as a natural, immersive host response in English only."
                         "不要输出 JSON、工具名、rule_id、status、字段名或英文内部提示。"
                         "如果结果表示该推理已经触发过，只委婉说明暂时没有新的发现，"
                         "不要提到系统拒绝、重复触发或内部规则。"
@@ -350,6 +375,7 @@ def build_dm_graph(checkpointer=None, tools=None):
                 break
 
             return {
+                "name": getattr(message, "name", None),
                 "visibility": (
                     "public"
                     if channel == "PUBLIC_MESSAGE"
@@ -363,6 +389,7 @@ def build_dm_graph(checkpointer=None, tools=None):
 
         if saw_tool_message:
             return {
+                "name": getattr(message, "name", None),
                 "visibility": "private",
                 "content": None,
                 "clue_ids": [],
@@ -371,6 +398,7 @@ def build_dm_graph(checkpointer=None, tools=None):
             }
 
         return {
+            "name": None,
             "visibility": "private",
             "content": None,
             "clue_ids": [],
@@ -394,12 +422,14 @@ def build_dm_graph(checkpointer=None, tools=None):
 
         return {
             "tool_result": {
+                "name": tool_result.get("name"),
                 "visibility": visibility,
                 "content": tool_result.get("content"),
                 "clue_ids": clue_ids,
                 "status": tool_result.get("status"),
                 "data": tool_result.get("data", {}),
-            }
+            },
+            "tool_called_this_turn": True,
         }
 
     def final_node(state: DMState) -> dict:
@@ -429,15 +459,20 @@ def build_dm_graph(checkpointer=None, tools=None):
                     "可以结合手中的证据，从另一个角度继续梳理。"
                 )
             else:
-                response_content = tool_result.get("content") or "主持人暂时没有更多信息。"
+                response_content = tool_result.get("content") or "The host has no further information at this time."
 
+        tool_called_this_turn = bool(state.get("tool_called_this_turn", False))
         return {
             "response": (
                 response_content.strip()
-                or "主持人暂时没有更多信息。"
+                or "The host has no further information at this time."
             ),
             "visibility": tool_result.get("visibility", "private"),
             "clue_ids": tool_result.get("clue_ids", []),
+            "tool_used": tool_called_this_turn,
+            "tool_name": tool_result.get("name") if tool_called_this_turn else None,
+            "tool_status": tool_result.get("status") if tool_called_this_turn else None,
+            "tool_data": tool_result.get("data", {}) if tool_called_this_turn else {},
         }
     
     graph = StateGraph(DMState)

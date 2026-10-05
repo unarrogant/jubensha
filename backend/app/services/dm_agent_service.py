@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.repositories.room_repository import RoomRepository
@@ -173,6 +174,10 @@ class DMAgentService:
             visibility=result.visibility,
             content=result.content.strip(),
             clue_ids=result.clue_ids,
+            tool_used=result.tool_used,
+            tool_name=result.tool_name,
+            tool_status=result.tool_status,
+            tool_data=result.tool_data,
         )
 
     def handle_player_message(
@@ -236,14 +241,38 @@ class DMAgentService:
             ),
             content=result.get(
                 "response",
-                "主持人暂时没有更多信息。",
+                "The host has no further information for you at this time.",
             ),
             clue_ids=result.get("clue_ids",[]),
+            tool_used=bool(result.get("tool_used", False)),
+            tool_name=result.get("tool_name"),
+            tool_status=result.get("tool_status"),
+            tool_data=result.get("tool_data", {}),
         )
-
-        return self._validate_player_result(
-            agent_result,
-        )
+        validated = self._validate_player_result(agent_result)
+        refreshed_room = self.room_repository.get(room_id)
+        if refreshed_room is not None:
+            player = next(
+                (item for item in refreshed_room.get("players", []) if item.get("id") == player_id),
+                {},
+            )
+            refreshed_room.setdefault("agent_audit_log", []).append({
+                "id": uuid4().hex,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "player_id": player_id,
+                "player_name": player.get("name"),
+                "character_id": player.get("character_id"),
+                "question": content,
+                "answer": validated.content,
+                "visibility": validated.visibility,
+                "clue_ids": validated.clue_ids,
+                "tool_used": validated.tool_used,
+                "tool_name": validated.tool_name,
+                "tool_status": validated.tool_status,
+                "tool_data": validated.tool_data,
+            })
+            self.room_repository.save(room_id)
+        return validated
 
     def build_public_context(
         self,
@@ -386,12 +415,12 @@ class DMAgentService:
         )
         content = result.get(
             "response",
-            "当前发生了一些变化。",
+            "The game has moved into a new phase.",
         )
         if stage_id == "ending":
             content = self._polish_ending_content(content)
             if not content:
-                content = "案件的最后真相已经揭开，主持人正在整理每个人走向的结局。"
+                content = "The final truth is ready to be revealed, along with the fate of every character."
         return DMAgentResult(
             visibility="public",
             content=content,

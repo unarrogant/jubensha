@@ -12,6 +12,9 @@ services:
         condition: service_healthy
       mysql:
         condition: service_healthy
+    ports:
+      # Expose the API for the local Vite development server on port 5173.
+      - "8000:8000"
     restart: unless-stopped
 
   frontend:

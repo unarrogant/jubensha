@@ -101,3 +101,23 @@ export function castVote(roomId, playerId, suspectId) {
     }),
   });
 }
+
+export function getAdminAgentAudit(roomId, token) {
+  return request(`/admin/rooms/${encodeURIComponent(roomId)}/agent-audit`, {
+    headers: adminHeaders(token),
+  });
+}
+
+export const getPeerReviewStatus = (roomId, playerId) =>
+  request(`/rooms/${encodeURIComponent(roomId)}/peer-review?${new URLSearchParams({ player_id: playerId })}`);
+
+export function submitPeerReview(roomId, playerId, bestSpeakerId, bestReasonerId) {
+  return request(`/rooms/${encodeURIComponent(roomId)}/peer-review`, {
+    method: "POST",
+    body: JSON.stringify({
+      player_id: playerId,
+      best_speaker_id: bestSpeakerId,
+      best_reasoner_id: bestReasonerId,
+    }),
+  });
+}

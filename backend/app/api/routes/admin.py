@@ -73,3 +73,16 @@ async def admin_room_detail(room_id: str, authorization: str | None = Header(def
     if room is None:
         raise HTTPException(status_code=404, detail="房间不存在")
     return room
+
+
+@router.get("/rooms/{room_id}/agent-audit")
+async def admin_agent_audit(room_id: str, authorization: str | None = Header(default=None)):
+    _require_admin(authorization)
+    room = room_repository.get(room_id)
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return {
+        "room_id": room_id,
+        "entries": room.get("agent_audit_log", []),
+        "peer_reviews": room.get("peer_reviews", {}),
+    }

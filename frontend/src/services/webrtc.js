@@ -5,16 +5,20 @@ export class WebRTCVoiceClient {
     iceServers = [],
     onRemoteStream = () => {},
     onPeerState = () => {},
+    onSpeakingChange = () => {},
   }) {
     this.websocket = websocket;
     this.playerId = playerId;
     this.iceServers = iceServers;
     this.onRemoteStream = onRemoteStream;
     this.onPeerState = onPeerState;
+    this.onSpeakingChange = onSpeakingChange;
     this.localStream = null;
     this.startPromise = null;
     this.muted = true;
     this.peers = new Map();
+    this.audioContext = null;
+    this.speakingMonitors = new Map();
   }
 
   async start({ muted = this.muted } = {}) {
@@ -31,6 +35,7 @@ export class WebRTCVoiceClient {
         video: false,
       }).then((stream) => {
         this.localStream = stream;
+        this.monitorSpeaking(this.playerId, stream);
         return stream;
       }).finally(() => {
         this.startPromise = null;
@@ -42,6 +47,7 @@ export class WebRTCVoiceClient {
     }
 
     this.setMuted(this.muted);
+    await this.resumeAudioAnalysis();
     return this.localStream;
   }
 
@@ -111,7 +117,10 @@ export class WebRTCVoiceClient {
 
     peer.connection.ontrack = (event) => {
       const stream = event.streams[0];
-      if (stream) this.onRemoteStream(remotePlayerId, stream);
+      if (stream) {
+        this.onRemoteStream(remotePlayerId, stream);
+        this.monitorSpeaking(remotePlayerId, stream);
+      }
     };
 
     peer.connection.onconnectionstatechange = () => {
@@ -190,10 +199,93 @@ export class WebRTCVoiceClient {
     for (const track of this.localStream?.getAudioTracks() || []) {
       track.enabled = !muted;
     }
+    if (muted) this.setMonitorSpeaking(this.playerId, false);
+  }
+
+  ensureAudioContext() {
+    if (this.audioContext) return this.audioContext;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    this.audioContext = new AudioContextClass();
+    return this.audioContext;
+  }
+
+  async resumeAudioAnalysis() {
+    const context = this.audioContext;
+    if (context?.state === "suspended") {
+      await context.resume().catch(() => {});
+    }
+  }
+
+  setMonitorSpeaking(playerId, speaking) {
+    const monitor = this.speakingMonitors.get(playerId);
+    if (monitor && monitor.speaking === speaking) return;
+    if (monitor) monitor.speaking = speaking;
+    this.onSpeakingChange(playerId, speaking);
+  }
+
+  monitorSpeaking(playerId, stream) {
+    if (!playerId || !stream?.getAudioTracks().length) return;
+    this.stopSpeakingMonitor(playerId);
+
+    const context = this.ensureAudioContext();
+    if (!context) return;
+
+    const source = context.createMediaStreamSource(stream);
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.72;
+    source.connect(analyser);
+
+    const samples = new Uint8Array(analyser.fftSize);
+    const monitor = {
+      source,
+      analyser,
+      speaking: false,
+      loudFrames: 0,
+      lastLoudAt: 0,
+      timer: null,
+    };
+
+    monitor.timer = window.setInterval(() => {
+      analyser.getByteTimeDomainData(samples);
+      let energy = 0;
+      for (const sample of samples) {
+        const normalized = (sample - 128) / 128;
+        energy += normalized * normalized;
+      }
+      const volume = Math.sqrt(energy / samples.length);
+      const now = performance.now();
+
+      if (volume >= 0.035) {
+        monitor.loudFrames += 1;
+        monitor.lastLoudAt = now;
+        if (monitor.loudFrames >= 2) this.setMonitorSpeaking(playerId, true);
+      } else {
+        monitor.loudFrames = 0;
+        if (monitor.speaking && now - monitor.lastLoudAt > 420) {
+          this.setMonitorSpeaking(playerId, false);
+        }
+      }
+    }, 80);
+
+    this.speakingMonitors.set(playerId, monitor);
+    void this.resumeAudioAnalysis();
+  }
+
+  stopSpeakingMonitor(playerId) {
+    const monitor = this.speakingMonitors.get(playerId);
+    if (!monitor) return;
+    window.clearInterval(monitor.timer);
+    monitor.source.disconnect();
+    monitor.analyser.disconnect();
+    this.speakingMonitors.delete(playerId);
+    if (monitor.speaking) this.onSpeakingChange(playerId, false);
   }
 
   closePeer(remotePlayerId) {
     const peer = this.peers.get(remotePlayerId);
+    this.stopSpeakingMonitor(remotePlayerId);
     if (!peer) return;
     peer.connection.close();
     this.peers.delete(remotePlayerId);
@@ -206,6 +298,11 @@ export class WebRTCVoiceClient {
     for (const track of this.localStream?.getTracks() || []) {
       track.stop();
     }
+    for (const playerId of [...this.speakingMonitors.keys()]) {
+      this.stopSpeakingMonitor(playerId);
+    }
+    this.audioContext?.close().catch(() => {});
+    this.audioContext = null;
     this.localStream = null;
     this.startPromise = null;
   }

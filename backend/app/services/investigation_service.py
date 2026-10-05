@@ -145,7 +145,7 @@ class InvestigationService:
         else:
             message = location.get(
                 "description",
-                "这里没有更多发现。",
+                "There is nothing more to discover here.",
             )
 
         self.room_repository.save(room_id)
@@ -180,7 +180,7 @@ class InvestigationService:
         if not searchable:
             return {
                 "channel": "PRIVATE_MESSAGE",
-                "message": "没有更多发现。",
+                "message": "You find nothing more.",
                 "clue_id": None,
             }
 
@@ -193,7 +193,7 @@ class InvestigationService:
         if searchable_object is None:
             return {
                 "channel":"PRIVATE_MESSAGE",
-                "message":"没有更多发现",
+                "message":"You find nothing more.",
                 "clue_id":None,
             }
 
@@ -206,7 +206,7 @@ class InvestigationService:
                 "channel": "PRIVATE_MESSAGE",
                 "message": result.get(
                     "message",
-                    "没有更多发现。",
+                    "You find nothing more.",
                 ),
                 "clue_id": None,
             }
@@ -223,7 +223,7 @@ class InvestigationService:
         if clue_id in discovered_clue_ids:
             return {
                 "channel": "PRIVATE_MESSAGE",
-                "message": "这里已经被仔细检查过了，没有更多发现。",
+                "message": "This place has already been searched carefully. You find nothing more.",
                 "clue_id": None,
             }
 

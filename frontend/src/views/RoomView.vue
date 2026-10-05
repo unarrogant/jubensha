@@ -20,6 +20,7 @@ import {
   WifiOff,
 } from "@lucide/vue";
 import AppHeader from "../components/AppHeader.vue";
+import AnnotatedText from "../components/AnnotatedText.vue";
 import {
   getGameState,
   getMessages,
@@ -27,8 +28,10 @@ import {
   getMyClues,
   getRoom,
   getRoomPlayers,
+  getPeerReviewStatus,
   getVoteStatus,
   castVote,
+  submitPeerReview,
   exitRoom as requestExitRoom,
 } from "../services/api";
 import { RoomWebSocket } from "../services/websocket";
@@ -63,10 +66,23 @@ const voteStatus = ref({
 const voteOpen = ref(false);
 const selectedSuspectId = ref("");
 const submittingVote = ref(false);
+const peerReview = ref({
+  has_submitted: false,
+  submitted_count: 0,
+  required_count: 0,
+  candidates: [],
+  results_revealed: false,
+  best_speakers: [],
+  best_reasoners: [],
+});
+const selectedBestSpeakerId = ref("");
+const selectedBestReasonerId = ref("");
+const submittingPeerReview = ref(false);
 const voiceEnabled = ref(false);
 const muted = ref(true);
 const voiceState = ref("idle");
 const voicePeers = ref({});
+const speakingPlayerIds = ref([]);
 const messageList = ref(null);
 const remoteAudioContainer = ref(null);
 let roomSocket = null;
@@ -89,16 +105,28 @@ const stageOrder = {
 };
 const stageName = computed(() => {
   const names = {
-    intro: "角色自我介绍",
-    investigation: "自由调查搜证",
-    discussion: "集中讨论推理",
-    voting: "投票指认",
-    ending: "揭示真相",
+    intro: "Character Introductions",
+    investigation: "Investigation",
+    discussion: "Discussion and Deduction",
+    voting: "Final Accusation",
+    ending: "The Final Reveal",
   };
   return gameState.value?.stage_name
     || names[gameState.value?.stage_id]
-    || "等待主持人";
+    || "Waiting for the Host";
 });
+const stageTasks = {
+  intro: "Introduce only your public identity in character. Do not reveal anything marked private on your role card. You may question the host privately in English.",
+  investigation: "Choose a searchable location, inspect an object, or submit a deduction. Ask the host privately in English; a sound deduction may unlock evidence.",
+  discussion: "Share evidence, challenge theories, and build your final accusation. Searches are closed, but you may still submit deductions to the host in English.",
+  voting: "Select the character you believe killed Duncan and cast your one final vote. No new searches, deductions, or clues are available.",
+  ending: "Listen as the host reconstructs the murder, reveals the vote, and explains the fate of every character.",
+};
+const currentStageTask = computed(() =>
+  stageTasks[gameState.value?.stage_id]
+  || "Wait for the host to announce the next instruction.",
+);
+const englishPhraseNotes = ref([]);
 const canExitRoom = computed(
   () => Boolean(room.value),
 );
@@ -111,6 +139,13 @@ const formattedTime = computed(() => {
 const myPublicPlayer = computed(() =>
   players.value.find((player) => player.name === session.value?.playerName),
 );
+const currentSpeakingPlayer = computed(() => {
+  for (const playerId of [...speakingPlayerIds.value].reverse()) {
+    const player = players.value.find((item) => item.id === playerId);
+    if (player) return player;
+  }
+  return null;
+});
 const onlineVoiceCount = computed(() =>
   Object.values(voicePeers.value).filter(
     (peer) => peer.connectionState !== "offline",
@@ -119,10 +154,27 @@ const onlineVoiceCount = computed(() =>
 const characterAvatarUrl = computed(() =>
   roomStore.getAssetUrl(script.value, character.value?.avatar),
 );
+const characterVocabulary = computed(() => character.value?.vocabulary || []);
 const hostAvatarUrl = computed(() =>
   roomStore.getAssetUrl(script.value, script.value?.agent_profile?.avatar),
 );
 const endingData = computed(() => gameState.value?.ending || null);
+const endingVoteRows = computed(() => {
+  const ending = endingData.value;
+  if (!ending) return [];
+  const names = Object.fromEntries(
+    (ending.character_fate_list || []).map((item) => [item.character_id, item.character_name]),
+  );
+  return Object.entries(ending.vote_counts || {})
+    .map(([characterId, count]) => ({
+      characterId,
+      characterName: names[characterId] || characterId,
+      count,
+    }))
+    .sort((left, right) => right.count - left.count);
+});
+const endingTruth = computed(() => endingData.value?.truth_reveal || []);
+const endingFates = computed(() => endingData.value?.character_fate_list || []);
 const endingStory = computed(() => {
   const finalMessage = [...messages.value]
     .reverse()
@@ -136,12 +188,59 @@ const endingStory = computed(() => {
   return (
     finalMessage?.content ||
     endingData.value?.narrative ||
-    "主持人正在整理这场案件的最后真相。"
+    "The host is preparing the final truth of the case."
   );
 });
+const stageSpeechPrompts = {
+  intro: "The character introduction stage has begun. Introduce only your public identity, keep your secrets hidden, and question the host in English if you need guidance.",
+  investigation: "The investigation has begun. Search an available location, inspect an object, or submit a deduction to the host in English.",
+  discussion: "The discussion has begun. Share your evidence, challenge each theory, and submit deductions to the host in English.",
+  voting: "The final accusation has begun. Choose the character you believe is the killer and cast your one vote.",
+  ending: "The final reveal has begun. Listen as the host reconstructs the crime and reveals every character's fate.",
+};
+const spokenStageKeys = new Set();
+
+function speakStagePrompt(state) {
+  const stageId = state?.stage_id;
+  const prompt = stageSpeechPrompts[stageId];
+  if (!prompt || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+  const stageKey = `${roomId.value}:${stageId}:${state?.stage_started_at || ""}`;
+  if (spokenStageKeys.has(stageKey)) return;
+
+  try {
+    if (window.sessionStorage.getItem(`stage-voice:${stageKey}`) === "1") return;
+    window.sessionStorage.setItem(`stage-voice:${stageKey}`, "1");
+  } catch {
+    // 语音提示不是游戏状态，存储不可用时仍然允许本次播放。
+  }
+
+  spokenStageKeys.add(stageKey);
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(prompt);
+  utterance.lang = "en-US";
+  utterance.rate = 0.95;
+  utterance.pitch = 1;
+  window.speechSynthesis.speak(utterance);
+}
 
 function getPlayerAvatarUrl(player) {
   return roomStore.getAssetUrl(script.value, player?.character_avatar);
+}
+
+function getRelationshipName(relationship) {
+  if (relationship?.name || relationship?.character_name) {
+    return relationship.name || relationship.character_name;
+  }
+
+  const knownNames = {
+    macbeth: "Macbeth",
+    lady_macbeth: "Lady Macbeth",
+    banquo: "Banquo",
+    malcolm: "Malcolm",
+    macduff: "Macduff",
+  };
+  return knownNames[relationship?.target_id] || "Unknown character";
 }
 
 function getClueAssetUrl(clue) {
@@ -222,6 +321,7 @@ async function syncGameState() {
     if (state.stage_id === "voting" || state.stage_id === "ending") {
       await syncVoteStatus();
     }
+    if (state.stage_id === "ending") await syncPeerReview();
   } catch (error) {
     errorMessage.value = error.message;
   }
@@ -246,6 +346,42 @@ async function syncVoteStatus() {
     if (gameState.value?.stage_id === "voting" || gameState.value?.stage_id === "ending") {
       errorMessage.value = error.message;
     }
+  }
+}
+
+async function syncPeerReview() {
+  if (!session.value?.playerId || gameState.value?.stage_id !== "ending") return;
+  try {
+    const status = await getPeerReviewStatus(roomId.value, session.value.playerId);
+    peerReview.value = status;
+    selectedBestSpeakerId.value = status.best_speaker_id || selectedBestSpeakerId.value;
+    selectedBestReasonerId.value = status.best_reasoner_id || selectedBestReasonerId.value;
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
+
+async function submitPeerReviewVotes() {
+  if (
+    !selectedBestSpeakerId.value
+    || !selectedBestReasonerId.value
+    || peerReview.value.has_submitted
+    || submittingPeerReview.value
+  ) return;
+  submittingPeerReview.value = true;
+  errorMessage.value = "";
+  try {
+    await submitPeerReview(
+      roomId.value,
+      session.value.playerId,
+      selectedBestSpeakerId.value,
+      selectedBestReasonerId.value,
+    );
+    await syncPeerReview();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    submittingPeerReview.value = false;
   }
 }
 
@@ -294,7 +430,7 @@ function updateRemainingTime() {
 
 async function loadGame() {
   if (!session.value?.playerId) {
-    errorMessage.value = "当前浏览器没有这个房间的玩家身份，请先从剧本大厅加入。";
+    errorMessage.value = "This browser has no player identity for the room. Please join from the lobby first.";
     loading.value = false;
     return;
   }
@@ -322,6 +458,7 @@ async function loadGame() {
     character.value = characterData;
     clues.value = clueData;
     applyGameState(stateData);
+    speakStagePrompt(stateData);
     updateRemainingTime();
     messages.value = messageData;
     updateStageAnnouncementPending();
@@ -362,28 +499,43 @@ function updateVoicePeer(playerId, changes) {
   };
 }
 
-function getPlayerVoiceStatus(playerName) {
-  if (playerName === session.value?.playerName) {
+function updateSpeakingPlayer(playerId, speaking) {
+  if (!playerId) return;
+  if (speaking) {
+    speakingPlayerIds.value = [
+      ...speakingPlayerIds.value.filter((id) => id !== playerId),
+      playerId,
+    ];
+    return;
+  }
+  speakingPlayerIds.value = speakingPlayerIds.value.filter((id) => id !== playerId);
+}
+
+function getPlayerVoiceStatus(player) {
+  if (speakingPlayerIds.value.includes(player.id)) {
+    return { label: "Speaking now", tone: "speaking" };
+  }
+  if (player.id === session.value?.playerId) {
     if (voiceState.value === "requesting") {
-      return { label: "正在准备语音", tone: "connecting" };
+      return { label: "Preparing voice", tone: "connecting" };
     }
     if (!voiceEnabled.value) {
-      return { label: "语音不可用", tone: "offline" };
+      return { label: "Voice unavailable", tone: "offline" };
     }
     return muted.value
-      ? { label: "已静音", tone: "muted" }
-      : { label: "麦克风开启", tone: "active" };
+      ? { label: "Muted", tone: "muted" }
+      : { label: "Microphone on", tone: "active" };
   }
 
   const peer = Object.values(voicePeers.value).find(
-    (item) => item.name === playerName,
+    (item) => item.id === player.id,
   );
   if (!peer || peer.connectionState === "offline") {
-    return { label: "未连接语音", tone: "offline" };
+    return { label: "Voice disconnected", tone: "offline" };
   }
   return peer.muted
-    ? { label: "已静音", tone: "muted" }
-    : { label: "麦克风开启", tone: "active" };
+    ? { label: "Muted", tone: "muted" }
+    : { label: "Microphone on", tone: "active" };
 }
 
 function publishVoiceState() {
@@ -407,6 +559,7 @@ async function connectRoom() {
     websocket: roomSocket,
     playerId: session.value.playerId,
     onRemoteStream: attachRemoteStream,
+    onSpeakingChange: updateSpeakingPlayer,
     onPeerState: (playerId, state) => {
       updateVoicePeer(playerId, { connectionState: state });
       if (state === "connected") voiceState.value = "connected";
@@ -434,6 +587,10 @@ async function connectRoom() {
         players.value = event.players;
       } else {
         await syncPublicPlayers();
+      }
+      if (event.type === "GAME_STARTED" && event.game) {
+        applyGameState(event.game);
+        speakStagePrompt(event.game);
       }
     }
     if (event.type === "CHAT_HISTORY") {
@@ -463,10 +620,11 @@ async function connectRoom() {
     }
     if (event.type === "ERROR") {
       awaitingHost.value = false;
-      errorMessage.value = event.message || "请求处理失败，请稍后重试。";
+      errorMessage.value = event.message || "The request failed. Please try again.";
     }
     if (event.type === "STAGE_CHANGED") {
       applyGameState(event.game);
+      speakStagePrompt(event.game);
       stageAnnouncementPending.value = true;
       updateRemainingTime();
       if (event.game?.stage_id === "voting") {
@@ -488,12 +646,22 @@ async function connectRoom() {
         required_votes: event.required_votes ?? voteStatus.value.required_votes,
       };
     }
+    if (event.type === "PEER_REVIEW_UPDATED") {
+      peerReview.value = {
+        ...peerReview.value,
+        submitted_count: event.submitted_count ?? peerReview.value.submitted_count,
+        required_count: event.required_count ?? peerReview.value.required_count,
+        results_revealed: event.results_revealed ?? peerReview.value.results_revealed,
+      };
+      await syncPeerReview();
+    }
     if (event.type === "GAME_ENDED") {
       room.value = { ...room.value, status: "ended" };
       gameState.value = event.game;
       stageAnnouncementPending.value = false;
       awaitingHost.value = false;
       updateRemainingTime();
+      await syncPeerReview();
     }
     if (event.type === "VOICE_PEERS") {
       for (const player of event.players || []) {
@@ -515,6 +683,7 @@ async function connectRoom() {
         muted: event.muted,
       });
     } else if (event.type === "VOICE_PEER_LEFT") {
+      updateSpeakingPlayer(event.player_id, false);
       updateVoicePeer(event.player_id, {
         name: event.player_name,
         muted: true,
@@ -525,7 +694,7 @@ async function connectRoom() {
       try {
         await voiceClient.handleSignalMessage(event);
       } catch (error) {
-        errorMessage.value = `语音连接失败：${error.message}`;
+        errorMessage.value = `Voice connection failed: ${error.message}`;
       }
     }
   });
@@ -539,7 +708,7 @@ async function connectRoom() {
   } catch (error) {
     voiceEnabled.value = false;
     voiceState.value = "unavailable";
-    errorMessage.value = `浏览器未能连接语音：${error.message}`;
+    errorMessage.value = `The browser could not connect to voice: ${error.message}`;
   }
 }
 
@@ -555,7 +724,7 @@ async function sendMessage() {
   });
 
   if (sent) messageText.value = "";
-  else errorMessage.value = "连接尚未恢复，请稍后再试。";
+  else errorMessage.value = "The connection has not recovered. Please try again shortly.";
   awaitingHost.value = sent;
   sending.value = false;
 }
@@ -574,13 +743,14 @@ async function toggleMuted() {
       publishVoiceState();
     } catch (error) {
       voiceState.value = "unavailable";
-      errorMessage.value = `浏览器未能连接语音：${error.message}`;
+      errorMessage.value = `The browser could not connect to voice: ${error.message}`;
     }
     return;
   }
 
   muted.value = !muted.value;
   voiceClient?.setMuted(muted.value);
+  void voiceClient?.resumeAudioAnalysis();
   publishVoiceState();
 
   if (!muted.value && remoteAudioContainer.value) {
@@ -655,44 +825,44 @@ onBeforeUnmount(() => {
             :class="{ active: voiceEnabled && !muted }"
             type="button"
             :disabled="voiceState === 'requesting'"
-            :title="!voiceEnabled || muted ? '开启麦克风' : '关闭麦克风'"
+            :title="!voiceEnabled || muted ? 'Turn microphone on' : 'Mute microphone'"
             @click="toggleMuted"
           >
             <MicOff v-if="!voiceEnabled || muted" :size="14" /><Mic v-else :size="14" />
-            {{ voiceState === "requesting" ? "连接语音中" : !voiceEnabled ? "开启麦克风" : muted ? "已静音" : "麦克风开启" }}
+            {{ voiceState === "requesting" ? "Connecting voice" : !voiceEnabled ? "Enable microphone" : muted ? "Muted" : "Microphone on" }}
           </button>
           <button
             v-if="canExitRoom"
             class="exit-room-button"
             type="button"
-            title="退出并返回剧本大厅"
+            title="Leave the room and return to the lobby"
             @click="leaveRoom"
           >
-            <LogOut :size="14" />退出房间
+            <LogOut :size="14" />Leave Room
           </button>
           <span class="connection-pill" :class="connectionState">
             <Wifi v-if="connectionState === 'online'" :size="14" /><WifiOff v-else :size="14" />
-            {{ connectionState === "online" ? "已连接" : "重连中" }}
+            {{ connectionState === "online" ? "Connected" : "Reconnecting" }}
           </span>
         </div>
       </template>
     </AppHeader>
 
     <main v-if="loading" class="page-loader">
-      <span></span><p>正在准备你的角色资料</p>
+      <span></span><p>Preparing your character dossier…</p>
     </main>
 
     <main v-else-if="!room" class="fatal-state">
-      <strong>!</strong><h1>无法进入游戏</h1>
+      <strong>!</strong><h1>Unable to Enter the Game</h1>
       <p>{{ errorMessage }}</p>
-      <RouterLink class="button button-primary" to="/">返回剧本大厅</RouterLink>
+      <RouterLink class="button button-primary" to="/">Return to the Lobby</RouterLink>
     </main>
 
     <main v-else class="game-main">
       <section class="game-command-bar">
         <div><span class="overline">ROOM</span><strong>{{ roomId }} · {{ script?.title || room.script_id }}</strong></div>
-        <div class="stage-status"><Radio :size="15" /><span>当前阶段</span><strong>{{ stageName }}</strong></div>
-        <span class="voice-summary"><Users :size="14" />{{ onlineVoiceCount }} 人在线</span>
+        <div class="stage-status"><Radio :size="15" /><span>CURRENT STAGE</span><strong>{{ stageName }}</strong></div>
+        <span class="voice-summary"><Users :size="14" />{{ onlineVoiceCount }} online</span>
       </section>
 
       <div v-if="errorMessage" class="inline-alert wide-alert">{{ errorMessage }}</div>
@@ -706,43 +876,120 @@ onBeforeUnmount(() => {
             </div>
             <span class="overline">YOUR ROLE</span>
             <div class="player-identity">
-              <span>玩家昵称</span>
-              <strong>{{ session?.playerName || myPublicPlayer?.name || "未命名玩家" }}</strong>
+              <span>PLAYER NAME</span>
+              <strong>{{ session?.playerName || myPublicPlayer?.name || "Unnamed Player" }}</strong>
             </div>
-            <h1>{{ character?.name || myPublicPlayer?.character_name || "未分配" }}</h1>
-            <p>{{ character?.public_profile || "暂无公开身份说明" }}</p>
-            <span class="private-label"><KeyRound :size="13" />以下内容仅你可见</span>
+            <h1>{{ character?.name || myPublicPlayer?.character_name || "Unassigned" }}</h1>
+            <p v-if="character?.tagline" class="character-tagline">{{ character.tagline }}</p>
+            <span class="character-section-label">YOUR IDENTITY</span>
+            <p>
+              <AnnotatedText
+                :text="character?.public_profile || 'No public profile available.'"
+                :vocabulary="characterVocabulary"
+              />
+            </p>
+            <span class="private-label"><KeyRound :size="13" />PRIVATE — ONLY YOU CAN SEE THIS</span>
 
-            <section class="character-block">
-              <h2>秘密背景</h2>
-              <p>{{ character?.private_background || "暂无资料" }}</p>
+            <section v-if="character?.case_background" class="character-block">
+              <h2>The Case</h2>
+              <p>
+                <AnnotatedText :text="character.case_background" :vocabulary="characterVocabulary" />
+              </p>
+            </section>
+            <section v-if="character?.case_details?.length" class="character-block">
+              <h2>Case Details</h2>
+              <dl class="case-details-list">
+                <div v-for="detail in character.case_details" :key="detail.label">
+                  <dt>{{ detail.label }}</dt>
+                  <dd><AnnotatedText :text="detail.value" :vocabulary="characterVocabulary" /></dd>
+                </div>
+              </dl>
+            </section>
+            <section v-if="character?.core_rules?.length" class="character-block">
+              <h2>Core Rules</h2>
+              <ul>
+                <li v-for="rule in character.core_rules" :key="rule">{{ rule }}</li>
+              </ul>
+            </section>
+            <section v-if="character?.private_background" class="character-block">
+              <h2>Private Background</h2>
+              <p>
+                <AnnotatedText
+                  :text="character?.private_background || 'No information available.'"
+                  :vocabulary="characterVocabulary"
+                />
+              </p>
             </section>
             <section class="character-block">
-              <h2>个人目标</h2>
-              <ul><li v-for="goal in character?.goals || []" :key="goal">{{ goal }}</li></ul>
+              <h2>Public Goal</h2>
+              <ul>
+                <li v-for="goal in character?.goals || []" :key="goal">
+                  <AnnotatedText :text="goal" :vocabulary="characterVocabulary" />
+                </li>
+              </ul>
             </section>
             <section class="character-block">
-              <h2>秘密</h2>
-              <ul><li v-for="secret in character?.secrets || []" :key="secret">{{ secret }}</li></ul>
+              <h2>Secret Missions</h2>
+              <ul>
+                <li v-for="secret in character?.secrets || []" :key="secret">
+                  <AnnotatedText :text="secret" :vocabulary="characterVocabulary" />
+                </li>
+              </ul>
+            </section>
+            <section v-if="character?.story?.length" class="character-block">
+              <h2>Your Story</h2>
+              <ol class="character-story">
+                <li v-for="paragraph in character.story" :key="paragraph">
+                  <AnnotatedText :text="paragraph" :vocabulary="characterVocabulary" />
+                </li>
+              </ol>
+            </section>
+            <section v-if="character?.initial_information?.length" class="character-block">
+              <h2>What You Know</h2>
+              <ul>
+                <li v-for="information in character.initial_information" :key="information">
+                  <AnnotatedText :text="information" :vocabulary="characterVocabulary" />
+                </li>
+              </ul>
+            </section>
+            <section v-if="character?.relationships?.length" class="character-block">
+              <h2>Relationships</h2>
+              <ul>
+                <li v-for="relationship in character.relationships" :key="relationship.character_id || relationship.name">
+                  <strong>{{ getRelationshipName(relationship) }}</strong>
+                  <span v-if="relationship.description"> — </span>
+                  <AnnotatedText
+                    v-if="relationship.description"
+                    :text="relationship.description"
+                    :vocabulary="characterVocabulary"
+                  />
+                </li>
+              </ul>
             </section>
           </article>
 
           <section class="cast-list">
-            <h2 class="rail-title"><Users :size="15" />公开角色表</h2>
-            <div v-for="(player, index) in players" :key="`${player.name}-${index}`" class="cast-item">
-              <span>
+            <h2 class="rail-title"><Users :size="15" />Public Cast</h2>
+            <div
+              v-for="(player, index) in players"
+              :key="`${player.name}-${index}`"
+              class="cast-item"
+              :class="{ speaking: speakingPlayerIds.includes(player.id) }"
+            >
+              <span class="cast-avatar">
                 <img
                   v-if="getPlayerAvatarUrl(player)"
                   :src="getPlayerAvatarUrl(player)"
                   :alt="player.character_name || player.name"
                 />
                 <template v-else>{{ player.name.slice(0, 1) }}</template>
+                <i v-if="speakingPlayerIds.includes(player.id)" class="cast-speaking-ring"></i>
               </span>
               <div>
-                <strong>{{ player.name }}</strong>
-                <small>{{ player.character_name || "角色未公开" }}</small>
-                <small class="voice-presence" :class="getPlayerVoiceStatus(player.name).tone">
-                  <i></i>{{ getPlayerVoiceStatus(player.name).label }}
+                <strong>{{ player.name }} <em v-if="speakingPlayerIds.includes(player.id)" class="cast-speaking-badge"><Mic :size="11" />SPEAKING</em></strong>
+                <small>{{ player.character_name || "Role not revealed" }}</small>
+                <small class="voice-presence" :class="getPlayerVoiceStatus(player).tone">
+                  <i></i>{{ getPlayerVoiceStatus(player).label }}
                 </small>
               </div>
             </div>
@@ -750,28 +997,63 @@ onBeforeUnmount(() => {
         </aside>
 
         <section class="dm-console">
-          <header class="console-header">
-            <span class="dm-avatar">
-              <img v-if="hostAvatarUrl" :src="hostAvatarUrl" alt="AI 主持人" />
-              <Bot v-else :size="20" />
-            </span>
-            <div>
-              <strong>{{ script?.agent_profile?.display_name || "AI 主持人" }}</strong>
-              <span><i></i>正在主持 · {{ stageName }}</span>
+          <header class="console-header meeting-console-header">
+            <div class="meeting-host-card">
+              <span class="dm-avatar">
+                <img v-if="hostAvatarUrl" :src="hostAvatarUrl" alt="AI Host" />
+                <Bot v-else :size="28" />
+              </span>
+              <div>
+                <small>AI GAME HOST</small>
+                <strong>{{ script?.agent_profile?.display_name || "AI Host" }}</strong>
+                <span><i></i>HOSTING · {{ stageName }}</span>
+              </div>
+            </div>
+
+            <div class="meeting-speaker-slot" :class="{ active: currentSpeakingPlayer }" aria-live="polite">
+              <template v-if="currentSpeakingPlayer">
+                <div class="meeting-speaker-portrait">
+                  <img
+                    v-if="getPlayerAvatarUrl(currentSpeakingPlayer)"
+                    :src="getPlayerAvatarUrl(currentSpeakingPlayer)"
+                    :alt="currentSpeakingPlayer.character_name || currentSpeakingPlayer.name"
+                  />
+                  <span v-else>{{ (currentSpeakingPlayer.character_name || currentSpeakingPlayer.name || "?").slice(0, 1) }}</span>
+                </div>
+                <div class="meeting-speaker-copy">
+                  <span class="meeting-live-label"><Mic :size="13" />SPEAKING NOW</span>
+                  <strong>{{ currentSpeakingPlayer.character_name || "Unrevealed Role" }}</strong>
+                  <small>{{ currentSpeakingPlayer.name }}</small>
+                </div>
+              </template>
+              <template v-else>
+                <div class="meeting-speaker-empty-icon"><MicOff :size="23" /></div>
+                <div class="meeting-speaker-copy">
+                  <span class="meeting-live-label idle">CURRENT SPEAKER</span>
+                  <strong>Waiting for a player</strong>
+                  <small>The active role card will appear here.</small>
+                </div>
+              </template>
             </div>
           </header>
+
+          <section class="stage-mission" aria-live="polite">
+            <span>NOW PLAYING</span>
+            <h2>{{ stageName }}</h2>
+            <p>{{ currentStageTask }}</p>
+          </section>
 
           <div ref="messageList" class="message-list">
             <div v-if="stageAnnouncementPending" class="stage-transition-notice">
               <Radio :size="18" />
               <div>
-                <strong>进入{{ stageName }}</strong>
-                <span>{{ gameState?.stage_description || "阶段已经切换" }} 主持人正在宣布本阶段安排。</span>
+                <strong>Entering {{ stageName }}</strong>
+                <span>{{ gameState?.stage_description || "The stage has changed." }} The host is announcing the instructions.</span>
               </div>
             </div>
 
             <div v-if="!messages.length && !stageAnnouncementPending" class="message-empty">
-              <Bot :size="26" /><strong>主持人正在准备</strong><span>你可以私聊主持人询问角色信息或提交推理。</span>
+              <Bot :size="26" /><strong>The host is preparing.</strong><span>Ask the host about your role or submit a deduction in English.</span>
             </div>
 
             <article
@@ -784,9 +1066,9 @@ onBeforeUnmount(() => {
               }"
               >
                 <div class="message-meta">
-                  <span>{{ message.type === "PLAYER_PRIVATE_MESSAGE" ? "你" : script?.agent_profile?.display_name || "主持人" }}</span>
+                  <span>{{ message.type === "PLAYER_PRIVATE_MESSAGE" ? "You" : script?.agent_profile?.display_name || "Host" }}</span>
                 <small :class="message.channel === 'PUBLIC_MESSAGE' ? 'public-tag' : 'private-tag'">
-                  {{ message.channel === "PUBLIC_MESSAGE" ? "公开信息" : "仅你可见" }}
+                  {{ message.channel === "PUBLIC_MESSAGE" ? "PUBLIC" : "PRIVATE" }}
                 </small>
                 </div>
                 <p>{{ message.content }}</p>
@@ -795,26 +1077,117 @@ onBeforeUnmount(() => {
                     v-for="clueId in message.clue_ids"
                     :key="`${message.id}-${clueId}`"
                     :src="getClueAssetUrl({ id: clueId })"
-                    alt="线索卡"
+                    alt="Clue card"
                   />
                 </div>
               </article>
 
-            <div v-if="awaitingHost" class="dm-thinking" aria-label="主持人正在回复">
-              主持人正在回应<span></span><span></span><span></span>
+            <div v-if="awaitingHost" class="dm-thinking" aria-label="The host is responding">
+              The host is responding<span></span><span></span><span></span>
             </div>
 
             <section v-if="endingData" class="ending-panel" aria-live="polite">
               <div class="ending-panel-heading">
                 <div>
                   <span class="overline">FINAL REVEAL</span>
-                  <h2>案件真相与结局</h2>
+                  <h2>The Truth and Its Consequences</h2>
                 </div>
                 <ShieldAlert :size="20" />
               </div>
 
-              <div class="ending-story">
-                <p>{{ endingStory }}</p>
+              <section class="ending-section ending-vote-result">
+                <span class="overline">1 · VOTE RESULT</span>
+                <h3>Who was voted out</h3>
+                <p v-if="endingData.suspect_name">The room's leading accusation was <strong>{{ endingData.suspect_name }}</strong>.</p>
+                <p v-else>The vote ended without a single leading accusation.</p>
+                <div v-if="endingVoteRows.length" class="ending-vote-table">
+                  <div v-for="row in endingVoteRows" :key="row.characterId" class="ending-vote-row">
+                    <span>{{ row.characterName }}</span><strong>{{ row.count }} {{ row.count === 1 ? 'vote' : 'votes' }}</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section class="ending-section">
+                <span class="overline">2 · FINAL OUTCOME</span>
+                <h3>{{ endingData.title || 'The final outcome' }}</h3>
+                <p class="ending-narrative">{{ endingStory }}</p>
+                <p v-if="endingData.winner_name" class="ending-winner">The winning side: <strong>{{ endingData.winner_name }}</strong></p>
+              </section>
+
+              <section class="ending-section">
+                <span class="overline">3 · WHAT REALLY HAPPENED</span>
+                <h3>The murder reconstructed</h3>
+                <ol v-if="endingTruth.length" class="ending-truth-list">
+                  <li v-for="truth in endingTruth" :key="truth">{{ truth }}</li>
+                </ol>
+                <p v-else>The host could not provide a separate truth reconstruction for this vote.</p>
+              </section>
+
+              <section v-if="endingFates.length" class="ending-section">
+                <span class="overline">4 · CASE REVIEW</span>
+                <h3>Where every character ended</h3>
+                <div class="ending-fate-list">
+                  <article v-for="fate in endingFates" :key="fate.character_id" class="ending-fate-item">
+                    <strong>{{ fate.character_name }}</strong><p>{{ fate.fate }}</p>
+                  </article>
+                </div>
+              </section>
+            </section>
+
+            <section v-if="endingData" class="peer-review-panel" aria-labelledby="peer-review-title">
+              <div class="peer-review-heading">
+                <div><span class="overline">PEER REVIEW</span><h2 id="peer-review-title">Recognize Your Fellow Players</h2></div>
+                <Users :size="20" />
+              </div>
+
+              <template v-if="!peerReview.has_submitted">
+                <p class="peer-review-help">Choose one player for each award. You cannot vote for yourself, and your choices cannot be changed after submission.</p>
+                <div class="peer-review-fields">
+                  <label>
+                    <span>Best Speaker</span>
+                    <small>Most active, easy to understand, fluent, and clear.</small>
+                    <select v-model="selectedBestSpeakerId">
+                      <option value="" disabled>Select a player</option>
+                      <option v-for="candidate in peerReview.candidates" :key="`speaker-${candidate.player_id}`" :value="candidate.player_id">
+                        {{ candidate.player_name }} · {{ candidate.character_name || 'Unknown role' }}
+                      </option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Best Reasoner</span>
+                    <small>Most accurate deduction and strongest use of evidence.</small>
+                    <select v-model="selectedBestReasonerId">
+                      <option value="" disabled>Select a player</option>
+                      <option v-for="candidate in peerReview.candidates" :key="`reasoner-${candidate.player_id}`" :value="candidate.player_id">
+                        {{ candidate.player_name }} · {{ candidate.character_name || 'Unknown role' }}
+                      </option>
+                    </select>
+                  </label>
+                </div>
+                <button
+                  class="peer-review-submit"
+                  type="button"
+                  :disabled="!selectedBestSpeakerId || !selectedBestReasonerId || submittingPeerReview"
+                  @click="submitPeerReviewVotes"
+                >{{ submittingPeerReview ? 'Submitting…' : 'Submit Peer Review' }}</button>
+              </template>
+
+              <div v-else-if="!peerReview.results_revealed" class="peer-review-waiting">
+                <CheckCircle2 :size="20" />
+                <div><strong>Your review has been recorded.</strong><span>Waiting for the other players: {{ peerReview.submitted_count }} / {{ peerReview.required_count }}</span></div>
+              </div>
+
+              <div v-else class="peer-review-results">
+                <article>
+                  <span>BEST SPEAKER</span>
+                  <h3>{{ peerReview.best_speakers.map((item) => item.player_name).join(' & ') }}</h3>
+                  <p>{{ peerReview.best_speakers.map((item) => `${item.votes} votes`).join(' · ') }}</p>
+                </article>
+                <article>
+                  <span>BEST REASONER</span>
+                  <h3>{{ peerReview.best_reasoners.map((item) => item.player_name).join(' & ') }}</h3>
+                  <p>{{ peerReview.best_reasoners.map((item) => `${item.votes} votes`).join(' · ') }}</p>
+                </article>
               </div>
             </section>
 
@@ -825,11 +1198,11 @@ onBeforeUnmount(() => {
               <div class="vote-panel-heading">
                 <div>
                   <span class="overline">FINAL ACCUSATION</span>
-                  <h2>投票指认凶手</h2>
+                  <h2>Identify the Killer</h2>
                 </div>
                 <ShieldAlert :size="18" />
               </div>
-              <p class="vote-help">请选择一名角色作为你认为的凶手。每位玩家只能投票一次。</p>
+              <p class="vote-help">Choose the character you believe killed Duncan. Each player may vote only once.</p>
               <div class="vote-options">
                 <label
                   v-for="candidate in voteStatus.candidates"
@@ -853,8 +1226,8 @@ onBeforeUnmount(() => {
                     <span v-else>{{ (candidate.character_name || candidate.player_name || '?').slice(0, 1) }}</span>
                   </span>
                   <span class="vote-option-copy">
-                    <strong>{{ candidate.character_name || '未命名角色' }}</strong>
-                    <small>{{ candidate.player_name || '未知玩家' }}</small>
+                    <strong>{{ candidate.character_name || 'Unnamed Character' }}</strong>
+                    <small>{{ candidate.player_name || 'Unknown Player' }}</small>
                   </span>
                   <CheckCircle2 v-if="selectedSuspectId === candidate.suspect_id" :size="16" />
                 </label>
@@ -865,44 +1238,65 @@ onBeforeUnmount(() => {
                 :disabled="!selectedSuspectId || voteStatus.has_voted || submittingVote || connectionState !== 'online'"
                 @click="submitVote"
               >
-                {{ voteStatus.has_voted ? '已提交指认' : submittingVote ? '提交中…' : '确认指认' }}
+                {{ voteStatus.has_voted ? 'Accusation Submitted' : submittingVote ? 'Submitting…' : 'Confirm Accusation' }}
               </button>
               <div class="vote-progress">
-                <span>已投票 {{ voteStatus.vote_count }} / {{ voteStatus.required_votes }}</span>
-                <span v-if="voteStatus.has_voted" class="vote-done">你的投票已记录</span>
+                <span>Votes {{ voteStatus.vote_count }} / {{ voteStatus.required_votes }}</span>
+                <span v-if="voteStatus.has_voted" class="vote-done">Your vote has been recorded.</span>
               </div>
             </section>
           </div>
 
           <form class="message-composer" @submit.prevent="sendMessage">
             <KeyRound :size="16" />
-            <label class="sr-only" for="host-message">私聊主持人</label>
+            <label class="sr-only" for="host-message">Private message to the host</label>
             <textarea
               id="host-message"
               v-model="messageText"
               maxlength="1000"
               rows="2"
-              placeholder="私聊主持人，询问、搜证或提交你的推理…"
+              placeholder="English only — question the host, investigate, or submit your deduction…"
               @keydown.enter.exact.prevent="sendMessage"
             ></textarea>
-            <button type="submit" title="发送" :disabled="!messageText.trim() || connectionState !== 'online'">
+            <button type="submit" title="Send" :disabled="!messageText.trim() || connectionState !== 'online'">
               <Send :size="17" />
             </button>
           </form>
         </section>
 
         <aside class="case-rail">
-          <div class="case-tabs" role="tablist" aria-label="线索与时间线">
-            <button :class="{ active: activeCaseTab === 'clues' }" type="button" @click="activeCaseTab = 'clues'">
-              <BookOpen :size="15" />线索 {{ clues.length }}
+          <div class="case-tabs" role="tablist" aria-label="Clues, timeline, and suggested phrases">
+            <button
+              :class="{ active: activeCaseTab === 'clues' }"
+              type="button"
+              role="tab"
+              :aria-selected="activeCaseTab === 'clues'"
+              @click="activeCaseTab = 'clues'"
+            >
+              <BookOpen :size="15" />Clues {{ clues.length }}
             </button>
-            <button :class="{ active: activeCaseTab === 'timeline' }" type="button" @click="activeCaseTab = 'timeline'">
-              <Clock3 :size="15" />时间线
+            <button
+              :class="{ active: activeCaseTab === 'timeline' }"
+              type="button"
+              role="tab"
+              :aria-selected="activeCaseTab === 'timeline'"
+              @click="activeCaseTab = 'timeline'"
+            >
+              <Clock3 :size="15" />Timeline
+            </button>
+            <button
+              :class="{ active: activeCaseTab === 'phrases' }"
+              type="button"
+              role="tab"
+              :aria-selected="activeCaseTab === 'phrases'"
+              @click="activeCaseTab = 'phrases'"
+            >
+              <FileKey2 :size="15" />Phrases
             </button>
           </div>
 
           <div v-if="activeCaseTab === 'clues'" class="case-content">
-            <header class="case-heading"><span class="overline">CASE FILE</span><h2>我的线索</h2></header>
+            <header class="case-heading"><span class="overline">CASE FILE</span><h2>My Clues</h2></header>
             <article v-for="clue in clues" :key="clue.id" class="clue-item">
               <img
                 v-if="getClueAssetUrl(clue)"
@@ -914,17 +1308,35 @@ onBeforeUnmount(() => {
               <span>{{ clue.id.replace("clue_", "#") }}</span><h3>{{ clue.title }}</h3><p>{{ clue.content }}</p>
               <div><small v-for="tag in clue.tags" :key="tag">{{ tag }}</small></div>
             </article>
-            <div v-if="!clues.length" class="case-empty"><BookOpen :size="25" /><span>获得的线索会出现在这里</span></div>
+            <div v-if="!clues.length" class="case-empty"><BookOpen :size="25" /><span>Your discovered clues will appear here.</span></div>
           </div>
 
-          <div v-else class="case-content">
-            <header class="case-heading"><span class="overline">PRIVATE TIMELINE</span><h2>我的时间线</h2></header>
+          <div v-else-if="activeCaseTab === 'timeline'" class="case-content">
+            <header class="case-heading"><span class="overline">PRIVATE TIMELINE</span><h2>My Timeline</h2></header>
             <ol class="timeline-list">
               <li v-for="item in character?.timeline || []" :key="`${item.time}-${item.description}`">
-                <time>{{ item.time }}</time><p>{{ item.description }}</p>
+                <time>{{ item.time }}</time>
+                <p>
+                  <span v-if="item.phase" class="timeline-phase">{{ item.phase }}</span>
+                  <AnnotatedText :text="item.description" :vocabulary="characterVocabulary" />
+                </p>
               </li>
             </ol>
-            <div v-if="!character?.timeline?.length" class="case-empty"><Clock3 :size="25" /><span>暂无时间线资料</span></div>
+            <div v-if="!character?.timeline?.length" class="case-empty"><Clock3 :size="25" /><span>No timeline information is available.</span></div>
+          </div>
+
+          <div v-else class="case-content speaking-notes-content">
+            <header class="case-heading">
+              <span class="overline">SPEAKING SUPPORT</span>
+              <h2>Suggested Phrases</h2>
+            </header>
+            <ul v-if="englishPhraseNotes.length" class="english-phrase-list">
+              <li v-for="note in englishPhraseNotes" :key="note">{{ note }}</li>
+            </ul>
+            <div v-else class="case-empty phrase-empty">
+              <FileKey2 :size="25" />
+              <span>Suggested English sentence patterns will be recorded here.</span>
+            </div>
           </div>
         </aside>
 

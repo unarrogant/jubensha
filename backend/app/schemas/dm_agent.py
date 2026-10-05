@@ -52,3 +52,7 @@ class DMAgentResult(BaseModel):
     visibility: Literal["private", "public"]
     content: str
     clue_ids: list[str] = Field(default_factory=list)
+    tool_used: bool = False
+    tool_name: str | None = None
+    tool_status: str | None = None
+    tool_data: dict[str, Any] = Field(default_factory=dict)

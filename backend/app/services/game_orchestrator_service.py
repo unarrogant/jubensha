@@ -110,7 +110,7 @@ class GameOrchestratorService:
                 message = self.dm_service.send_public(
                     room_id=room_id,
                     content=(
-                        f"主持人将一张线索卡放在众人面前：《{clue.get('title', '未命名线索')}》。"
+                        f"The host places a clue before everyone: “{clue.get('title', 'Untitled Clue')}.” "
                         f"{clue.get('content', '')}"
                     ),
                     clue_ids=[clue_id],
@@ -128,7 +128,7 @@ class GameOrchestratorService:
                 room_id=room_id,
                 player_id=item["player_id"],
                 content=(
-                    f"主持人递来一张搜证前线索卡：《{clue.get('title', '未命名线索')}》。"
+                    f"The host hands you a clue before the search: “{clue.get('title', 'Untitled Clue')}.” "
                     f"{clue.get('content', '')}"
                 ),
                 clue_ids=[clue_id],
