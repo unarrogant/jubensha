@@ -7,7 +7,6 @@ from app.agent.state import DMState
 from app.repositories.room_repository import RoomRepository
 from app.schemas.dm_agent import (
     AgentToolResult,
-    EmptyToolArgs,
     EnterLocationArgs,
     InspectObjectArgs,
     UnlockReasoningArgs,
@@ -81,7 +80,9 @@ def build_dm_tools(
     investigation_service: InvestigationService,
     reasoning_service:ReasoningService,
 ):
-    @tool(args_schema=EmptyToolArgs)
+    # Let LangChain infer the schema from the function signature.  InjectedState
+    # is intentionally hidden from the model and populated by ToolNode.
+    @tool
     def get_game_state(
         state: Annotated[DMState, InjectedState],
     ) -> dict:
@@ -102,7 +103,7 @@ def build_dm_tools(
             },
         })
     
-    @tool(args_schema=EnterLocationArgs)
+    @tool
     def enter_location(
         location_id: str,
         state: Annotated[DMState, InjectedState],
@@ -126,7 +127,7 @@ def build_dm_tools(
             )
         )
 
-    @tool(args_schema=InspectObjectArgs)
+    @tool
     def inspect_object(
         location_id: str,
         object_text: str,
@@ -152,7 +153,7 @@ def build_dm_tools(
             )
         )
 
-    @tool(args_schema=UnlockReasoningArgs)
+    @tool
     def unlock_reasoning_rule(
         rule_id: str,
         reasoning: str,

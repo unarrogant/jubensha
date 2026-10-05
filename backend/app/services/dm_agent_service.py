@@ -12,6 +12,7 @@ from app.services.reasoning_service import ReasoningService
 from app.config import get_storage_config
 
 class DMAgentService:
+    AGENT_THREAD_VERSION = "v2"
     def __init__(
         self,
         room_repository: RoomRepository,
@@ -205,7 +206,9 @@ class DMAgentService:
             content=content,
         )
 
-        thread_id = f"{room_id}:{player_id}"
+        # v2 skips checkpoints created by the old tool schema, which could
+        # contain an assistant tool call without its matching ToolMessage.
+        thread_id = f"{room_id}:{player_id}:{self.AGENT_THREAD_VERSION}"
 
         payload = {
             "room_id": room_id,
@@ -223,7 +226,7 @@ class DMAgentService:
         except Exception:
             # 旧线程可能残留不兼容的供应商字段（例如 reasoning_content）。
             # 用全新线程重试一次，仍由同一个 AI 生成回复。
-            recovery_thread_id = f"{room_id}:{player_id}:retry:{uuid4().hex}"
+            recovery_thread_id = f"{room_id}:{player_id}:{self.AGENT_THREAD_VERSION}:retry:{uuid4().hex}"
             payload["thread_id"] = recovery_thread_id
             result = self.graph.invoke(
                 payload,
