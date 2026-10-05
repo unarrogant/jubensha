@@ -151,9 +151,9 @@ def build_dm_graph(checkpointer=None, tools=None):
         system_prompt = context.get("DM_SYSTEM", "")
         is_public_event = state.get("request_type") == "public_event"
         language_rule = (
-            "\nAll player-facing output must be fluent English only. "
-            "Never answer in Chinese and never mix Chinese into the response. "
-            "Keep the tone immersive, restrained, and natural."
+            "\n所有面向玩家的主持人回复必须使用自然、流畅的中文。"
+            "不要输出英文主持词、JSON、工具调用标记或内部字段名。"
+            "保持沉浸、克制、清晰的叙述语气。"
         )
 
         full_messages = list(state.get("messages", []))
@@ -243,7 +243,7 @@ def build_dm_graph(checkpointer=None, tools=None):
                 )
                 if (state.get("event_payload") or {}).get("stage_id") == "ending":
                     behavior_prompt += (
-                        "\n结局复盘必须写成连续、完整、自然的英文主持人口述，不得使用项目符号、编号、"
+                        "\n结局复盘必须写成连续、完整、自然的中文主持人口述，不得使用项目符号、编号、"
                         "Markdown 加粗、分栏标题、字段名、JSON 或英文内部标记。请按时间顺序还原 "
                         "EVENT_PAYLOAD.ending 中的案件经过，交代人物动机、关键行动、现场如何被伪造、"
                         "调查如何揭开真相，以及投票之后发生的结局。必须覆盖 truth_reveal 中的全部事实，"
@@ -267,7 +267,7 @@ def build_dm_graph(checkpointer=None, tools=None):
             messages.append(
                 HumanMessage(
                     content=(
-                        "Rewrite the tool result as a natural, immersive host response in English only."
+                        "请把工具结果改写成自然、沉浸的中文主持人口吻。"
                         "不要输出 JSON、工具名、rule_id、status、字段名或英文内部提示。"
                         "如果结果表示该推理已经触发过，只委婉说明暂时没有新的发现，"
                         "不要提到系统拒绝、重复触发或内部规则。"
@@ -459,13 +459,13 @@ def build_dm_graph(checkpointer=None, tools=None):
                     "可以结合手中的证据，从另一个角度继续梳理。"
                 )
             else:
-                response_content = tool_result.get("content") or "The host has no further information at this time."
+                response_content = tool_result.get("content") or "主持人暂时没有更多可以补充的信息。"
 
         tool_called_this_turn = bool(state.get("tool_called_this_turn", False))
         return {
             "response": (
                 response_content.strip()
-                or "The host has no further information at this time."
+                or "主持人暂时没有更多可以补充的信息。"
             ),
             "visibility": tool_result.get("visibility", "private"),
             "clue_ids": tool_result.get("clue_ids", []),

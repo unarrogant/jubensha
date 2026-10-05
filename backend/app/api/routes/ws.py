@@ -195,13 +195,12 @@ async def room_websocket(
                         content=data.get("content",""),
                     )
 
-                    if not message_service.is_english_message(message_data.content):
+                    if not message_service.is_player_message(message_data.content):
                         await push_private_message(
                             room_id=room_id,
                             player_id=player_id,
                             content=(
-                                "Please ask the host in English. Your message was not submitted, "
-                                "and the host will not answer the case until you rephrase it in English."
+                                "消息不能为空，请输入你想询问主持人的内容。"
                             ),
                             clue_ids=[],
                         )
@@ -259,7 +258,7 @@ async def room_websocket(
                     )
                     await websocket.send_json({
                         "type": "ERROR",
-                        "message": "The host cannot respond at the moment. Please try again shortly.",
+                        "message": "主持人暂时无法回复，请稍后再试。",
                     })
                     continue
 

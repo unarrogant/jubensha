@@ -108,19 +108,19 @@ const stageName = computed(() => {
     intro: "Character Introductions",
     investigation: "Investigation",
     discussion: "Discussion and Deduction",
-    voting: "Final Accusation",
-    ending: "The Final Reveal",
+    voting: "最终投票",
+    ending: "最终复盘",
   };
   return gameState.value?.stage_name
     || names[gameState.value?.stage_id]
-    || "Waiting for the Host";
+    || "等待主持人";
 });
 const stageTasks = {
-  intro: "Introduce only your public identity in character. Do not reveal anything marked private on your role card. You may question the host privately in English.",
-  investigation: "Choose a searchable location, inspect an object, or submit a deduction. Ask the host privately in English; a sound deduction may unlock evidence.",
-  discussion: "Share evidence, challenge theories, and build your final accusation. Searches are closed, but you may still submit deductions to the host in English.",
-  voting: "Select the character you believe killed Duncan and cast your one final vote. No new searches, deductions, or clues are available.",
-  ending: "Listen as the host reconstructs the murder, reveals the vote, and explains the fate of every character.",
+  intro: "请用角色身份介绍公开信息，不要透露角色卡上的秘密。你可以在对话框里向主持人提问。",
+  investigation: "选择地点、检查物品，或提交你的推理。你可以在对话框里向主持人询问，符合条件的推理可能解锁证据。",
+  discussion: "分享线索、质疑观点并整理最终推理。搜证已经结束，但仍可以向主持人提问或提交推理。",
+  voting: "选择你认为最合理的最终答案，并完成一次投票。当前阶段不能继续搜证或提交新推理。",
+  ending: "听主持人还原完整经过、公布投票结果，并说明每位角色的最终命运。",
 };
 const currentStageTask = computed(() =>
   stageTasks[gameState.value?.stage_id]
@@ -188,15 +188,15 @@ const endingStory = computed(() => {
   return (
     finalMessage?.content ||
     endingData.value?.narrative ||
-    "The host is preparing the final truth of the case."
+    "主持人正在准备本局最终真相。"
   );
 });
 const stageSpeechPrompts = {
-  intro: "The character introduction stage has begun. Introduce only your public identity, keep your secrets hidden, and question the host in English if you need guidance.",
-  investigation: "The investigation has begun. Search an available location, inspect an object, or submit a deduction to the host in English.",
-  discussion: "The discussion has begun. Share your evidence, challenge each theory, and submit deductions to the host in English.",
-  voting: "The final accusation has begun. Choose the character you believe is the killer and cast your one vote.",
-  ending: "The final reveal has begun. Listen as the host reconstructs the crime and reveals every character's fate.",
+  intro: "自我介绍阶段开始。请介绍公开身份，保留秘密，并在需要时向主持人提问。",
+  investigation: "搜证阶段开始。请选择地点、检查物品，或向主持人提交推理。",
+  discussion: "讨论阶段开始。请分享线索、质疑观点，并整理自己的推理。",
+  voting: "最终投票阶段开始。请完成一次投票。",
+  ending: "最终复盘开始。请听主持人还原经过并公布每位角色的命运。",
 };
 const spokenStageKeys = new Set();
 
@@ -620,7 +620,7 @@ async function connectRoom() {
     }
     if (event.type === "ERROR") {
       awaitingHost.value = false;
-      errorMessage.value = event.message || "The request failed. Please try again.";
+      errorMessage.value = event.message || "请求失败，请稍后再试。";
     }
     if (event.type === "STAGE_CHANGED") {
       applyGameState(event.game);
@@ -724,7 +724,7 @@ async function sendMessage() {
   });
 
   if (sent) messageText.value = "";
-  else errorMessage.value = "The connection has not recovered. Please try again shortly.";
+  else errorMessage.value = "连接尚未恢复，请稍后再试。";
   awaitingHost.value = sent;
   sending.value = false;
 }
@@ -888,10 +888,10 @@ onBeforeUnmount(() => {
                 :vocabulary="characterVocabulary"
               />
             </p>
-            <span class="private-label"><KeyRound :size="13" />PRIVATE — ONLY YOU CAN SEE THIS</span>
+            <span class="private-label"><KeyRound :size="13" />私信 — 只有你能看到</span>
 
             <section v-if="character?.case_background" class="character-block">
-              <h2>The Case</h2>
+              <h2>案件信息</h2>
               <p>
                 <AnnotatedText :text="character.case_background" :vocabulary="characterVocabulary" />
               </p>
@@ -1030,8 +1030,8 @@ onBeforeUnmount(() => {
                 <div class="meeting-speaker-empty-icon"><MicOff :size="23" /></div>
                 <div class="meeting-speaker-copy">
                   <span class="meeting-live-label idle">CURRENT SPEAKER</span>
-                  <strong>Waiting for a player</strong>
-                  <small>The active role card will appear here.</small>
+                  <strong>等待玩家发言</strong>
+                  <small>正在发言的角色卡会显示在这里。</small>
                 </div>
               </template>
             </div>
@@ -1047,13 +1047,13 @@ onBeforeUnmount(() => {
             <div v-if="stageAnnouncementPending" class="stage-transition-notice">
               <Radio :size="18" />
               <div>
-                <strong>Entering {{ stageName }}</strong>
-                <span>{{ gameState?.stage_description || "The stage has changed." }} The host is announcing the instructions.</span>
+                <strong>进入{{ stageName }}</strong>
+                <span>{{ gameState?.stage_description || "阶段已经切换。" }} 主持人正在宣布本阶段安排。</span>
               </div>
             </div>
 
             <div v-if="!messages.length && !stageAnnouncementPending" class="message-empty">
-              <Bot :size="26" /><strong>The host is preparing.</strong><span>Ask the host about your role or submit a deduction in English.</span>
+              <Bot :size="26" /><strong>主持人正在准备。</strong><span>你可以询问角色信息，或向主持人提交推理。</span>
             </div>
 
             <article
@@ -1066,9 +1066,9 @@ onBeforeUnmount(() => {
               }"
               >
                 <div class="message-meta">
-                  <span>{{ message.type === "PLAYER_PRIVATE_MESSAGE" ? "You" : script?.agent_profile?.display_name || "Host" }}</span>
+                  <span>{{ message.type === "PLAYER_PRIVATE_MESSAGE" ? "你" : script?.agent_profile?.display_name || "主持人" }}</span>
                 <small :class="message.channel === 'PUBLIC_MESSAGE' ? 'public-tag' : 'private-tag'">
-                  {{ message.channel === "PUBLIC_MESSAGE" ? "PUBLIC" : "PRIVATE" }}
+                  {{ message.channel === "PUBLIC_MESSAGE" ? "公开" : "私信" }}
                 </small>
                 </div>
                 <p>{{ message.content }}</p>
@@ -1082,50 +1082,50 @@ onBeforeUnmount(() => {
                 </div>
               </article>
 
-            <div v-if="awaitingHost" class="dm-thinking" aria-label="The host is responding">
-              The host is responding<span></span><span></span><span></span>
+            <div v-if="awaitingHost" class="dm-thinking" aria-label="主持人正在回复">
+              主持人正在回复<span></span><span></span><span></span>
             </div>
 
             <section v-if="endingData" class="ending-panel" aria-live="polite">
               <div class="ending-panel-heading">
                 <div>
-                  <span class="overline">FINAL REVEAL</span>
-                  <h2>The Truth and Its Consequences</h2>
+                  <span class="overline">最终复盘</span>
+                  <h2>真相与最终结局</h2>
                 </div>
                 <ShieldAlert :size="20" />
               </div>
 
               <section class="ending-section ending-vote-result">
                 <span class="overline">1 · VOTE RESULT</span>
-                <h3>Who was voted out</h3>
-                <p v-if="endingData.suspect_name">The room's leading accusation was <strong>{{ endingData.suspect_name }}</strong>.</p>
-                <p v-else>The vote ended without a single leading accusation.</p>
+                <h3>最终选择</h3>
+                <p v-if="endingData.suspect_name">本局票数最高的选择是 <strong>{{ endingData.suspect_name }}</strong>。</p>
+                <p v-else>本次投票没有形成唯一的最高选择。</p>
                 <div v-if="endingVoteRows.length" class="ending-vote-table">
                   <div v-for="row in endingVoteRows" :key="row.characterId" class="ending-vote-row">
-                    <span>{{ row.characterName }}</span><strong>{{ row.count }} {{ row.count === 1 ? 'vote' : 'votes' }}</strong>
+                    <span>{{ row.characterName }}</span><strong>{{ row.count }} 票</strong>
                   </div>
                 </div>
               </section>
 
               <section class="ending-section">
-                <span class="overline">2 · FINAL OUTCOME</span>
-                <h3>{{ endingData.title || 'The final outcome' }}</h3>
+                <span class="overline">2 · 最终结局</span>
+                <h3>{{ endingData.title || '最终结局' }}</h3>
                 <p class="ending-narrative">{{ endingStory }}</p>
-                <p v-if="endingData.winner_name" class="ending-winner">The winning side: <strong>{{ endingData.winner_name }}</strong></p>
+                <p v-if="endingData.winner_name" class="ending-winner">最终结果：<strong>{{ endingData.winner_name }}</strong></p>
               </section>
 
               <section class="ending-section">
                 <span class="overline">3 · WHAT REALLY HAPPENED</span>
-                <h3>The murder reconstructed</h3>
+                <h3>事情究竟是怎样发生的</h3>
                 <ol v-if="endingTruth.length" class="ending-truth-list">
                   <li v-for="truth in endingTruth" :key="truth">{{ truth }}</li>
                 </ol>
-                <p v-else>The host could not provide a separate truth reconstruction for this vote.</p>
+                <p v-else>主持人暂时无法提供这次选择对应的真相还原。</p>
               </section>
 
               <section v-if="endingFates.length" class="ending-section">
                 <span class="overline">4 · CASE REVIEW</span>
-                <h3>Where every character ended</h3>
+                <h3>每位角色最后的命运</h3>
                 <div class="ending-fate-list">
                   <article v-for="fate in endingFates" :key="fate.character_id" class="ending-fate-item">
                     <strong>{{ fate.character_name }}</strong><p>{{ fate.fate }}</p>
@@ -1141,25 +1141,25 @@ onBeforeUnmount(() => {
               </div>
 
               <template v-if="!peerReview.has_submitted">
-                <p class="peer-review-help">Choose one player for each award. You cannot vote for yourself, and your choices cannot be changed after submission.</p>
+                <p class="peer-review-help">每个奖项选择一名玩家。不能投给自己，提交后不能修改。</p>
                 <div class="peer-review-fields">
                   <label>
-                    <span>Best Speaker</span>
-                    <small>Most active, easy to understand, fluent, and clear.</small>
+                    <span>最佳发言者</span>
+                    <small>发言积极、表达清晰、容易理解。</small>
                     <select v-model="selectedBestSpeakerId">
-                      <option value="" disabled>Select a player</option>
+                      <option value="" disabled>请选择玩家</option>
                       <option v-for="candidate in peerReview.candidates" :key="`speaker-${candidate.player_id}`" :value="candidate.player_id">
-                        {{ candidate.player_name }} · {{ candidate.character_name || 'Unknown role' }}
+                        {{ candidate.player_name }} · {{ candidate.character_name || '未知角色' }}
                       </option>
                     </select>
                   </label>
                   <label>
-                    <span>Best Reasoner</span>
-                    <small>Most accurate deduction and strongest use of evidence.</small>
+                    <span>最佳推理者</span>
+                    <small>推理准确，能够充分使用线索。</small>
                     <select v-model="selectedBestReasonerId">
-                      <option value="" disabled>Select a player</option>
+                      <option value="" disabled>请选择玩家</option>
                       <option v-for="candidate in peerReview.candidates" :key="`reasoner-${candidate.player_id}`" :value="candidate.player_id">
-                        {{ candidate.player_name }} · {{ candidate.character_name || 'Unknown role' }}
+                        {{ candidate.player_name }} · {{ candidate.character_name || '未知角色' }}
                       </option>
                     </select>
                   </label>
@@ -1169,24 +1169,24 @@ onBeforeUnmount(() => {
                   type="button"
                   :disabled="!selectedBestSpeakerId || !selectedBestReasonerId || submittingPeerReview"
                   @click="submitPeerReviewVotes"
-                >{{ submittingPeerReview ? 'Submitting…' : 'Submit Peer Review' }}</button>
+                >{{ submittingPeerReview ? '提交中…' : '提交互评' }}</button>
               </template>
 
               <div v-else-if="!peerReview.results_revealed" class="peer-review-waiting">
                 <CheckCircle2 :size="20" />
-                <div><strong>Your review has been recorded.</strong><span>Waiting for the other players: {{ peerReview.submitted_count }} / {{ peerReview.required_count }}</span></div>
+                <div><strong>你的互评已记录。</strong><span>等待其他玩家完成：{{ peerReview.submitted_count }} / {{ peerReview.required_count }}</span></div>
               </div>
 
               <div v-else class="peer-review-results">
                 <article>
-                  <span>BEST SPEAKER</span>
+                  <span>最佳发言者</span>
                   <h3>{{ peerReview.best_speakers.map((item) => item.player_name).join(' & ') }}</h3>
-                  <p>{{ peerReview.best_speakers.map((item) => `${item.votes} votes`).join(' · ') }}</p>
+                  <p>{{ peerReview.best_speakers.map((item) => `${item.votes} 票`).join('、') }}</p>
                 </article>
                 <article>
-                  <span>BEST REASONER</span>
+                  <span>最佳推理者</span>
                   <h3>{{ peerReview.best_reasoners.map((item) => item.player_name).join(' & ') }}</h3>
-                  <p>{{ peerReview.best_reasoners.map((item) => `${item.votes} votes`).join(' · ') }}</p>
+                  <p>{{ peerReview.best_reasoners.map((item) => `${item.votes} 票`).join('、') }}</p>
                 </article>
               </div>
             </section>
@@ -1197,12 +1197,12 @@ onBeforeUnmount(() => {
             >
               <div class="vote-panel-heading">
                 <div>
-                  <span class="overline">FINAL ACCUSATION</span>
-                  <h2>Identify the Killer</h2>
+                  <span class="overline">最终投票</span>
+                  <h2>选择你的最终判断</h2>
                 </div>
                 <ShieldAlert :size="18" />
               </div>
-              <p class="vote-help">Choose the character you believe killed Duncan. Each player may vote only once.</p>
+              <p class="vote-help">请选择你认为最合理的最终答案。每名玩家只能投票一次。</p>
               <div class="vote-options">
                 <label
                   v-for="candidate in voteStatus.candidates"
@@ -1226,8 +1226,8 @@ onBeforeUnmount(() => {
                     <span v-else>{{ (candidate.character_name || candidate.player_name || '?').slice(0, 1) }}</span>
                   </span>
                   <span class="vote-option-copy">
-                    <strong>{{ candidate.character_name || 'Unnamed Character' }}</strong>
-                    <small>{{ candidate.player_name || 'Unknown Player' }}</small>
+                    <strong>{{ candidate.character_name || '未命名角色' }}</strong>
+                    <small>{{ candidate.player_name || '未知玩家' }}</small>
                   </span>
                   <CheckCircle2 v-if="selectedSuspectId === candidate.suspect_id" :size="16" />
                 </label>
@@ -1238,11 +1238,11 @@ onBeforeUnmount(() => {
                 :disabled="!selectedSuspectId || voteStatus.has_voted || submittingVote || connectionState !== 'online'"
                 @click="submitVote"
               >
-                {{ voteStatus.has_voted ? 'Accusation Submitted' : submittingVote ? 'Submitting…' : 'Confirm Accusation' }}
+                {{ voteStatus.has_voted ? '已提交投票' : submittingVote ? '提交中…' : '确认投票' }}
               </button>
               <div class="vote-progress">
-                <span>Votes {{ voteStatus.vote_count }} / {{ voteStatus.required_votes }}</span>
-                <span v-if="voteStatus.has_voted" class="vote-done">Your vote has been recorded.</span>
+                <span>投票 {{ voteStatus.vote_count }} / {{ voteStatus.required_votes }}</span>
+                <span v-if="voteStatus.has_voted" class="vote-done">你的投票已记录。</span>
               </div>
             </section>
           </div>
@@ -1255,7 +1255,7 @@ onBeforeUnmount(() => {
               v-model="messageText"
               maxlength="1000"
               rows="2"
-              placeholder="English only — question the host, investigate, or submit your deduction…"
+              placeholder="输入你想对主持人说的话，询问线索或提交推理…"
               @keydown.enter.exact.prevent="sendMessage"
             ></textarea>
             <button type="submit" title="Send" :disabled="!messageText.trim() || connectionState !== 'online'">
@@ -1312,7 +1312,7 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-else-if="activeCaseTab === 'timeline'" class="case-content">
-            <header class="case-heading"><span class="overline">PRIVATE TIMELINE</span><h2>My Timeline</h2></header>
+            <header class="case-heading"><span class="overline">私人时间线</span><h2>我的时间线</h2></header>
             <ol class="timeline-list">
               <li v-for="item in character?.timeline || []" :key="`${item.time}-${item.description}`">
                 <time>{{ item.time }}</time>
@@ -1328,14 +1328,14 @@ onBeforeUnmount(() => {
           <div v-else class="case-content speaking-notes-content">
             <header class="case-heading">
               <span class="overline">SPEAKING SUPPORT</span>
-              <h2>Suggested Phrases</h2>
+              <h2>建议句式</h2>
             </header>
             <ul v-if="englishPhraseNotes.length" class="english-phrase-list">
               <li v-for="note in englishPhraseNotes" :key="note">{{ note }}</li>
             </ul>
             <div v-else class="case-empty phrase-empty">
               <FileKey2 :size="25" />
-              <span>Suggested English sentence patterns will be recorded here.</span>
+              <span>适合当前阶段的建议句式会记录在这里。</span>
             </div>
           </div>
         </aside>

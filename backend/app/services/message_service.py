@@ -15,18 +15,18 @@ class MessageService:
         self.bundle_loader=bundle_loader
 
     @staticmethod
-    def is_english_message(content: str) -> bool:
-        """Accept an English prompt and reject CJK or letterless input."""
-        clean_content = content.strip()
-        if not clean_content:
-            return False
+    def is_player_message(content: str) -> bool:
+        """Validate that the player submitted non-empty chat content."""
+        return bool(content and content.strip())
 
-        contains_cjk = re.search(
-            r"[\u3400-\u4dbf\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]",
-            clean_content,
-        )
-        contains_latin_word = re.search(r"[A-Za-z]{2,}", clean_content)
-        return contains_cjk is None and contains_latin_word is not None
+    @staticmethod
+    def is_english_message(content: str) -> bool:
+        """Compatibility alias retained for older callers.
+
+        Chat is no longer restricted to English; player messages may be in
+        Chinese or another language as long as they are not empty.
+        """
+        return MessageService.is_player_message(content)
 
     @staticmethod
     def _get_player(

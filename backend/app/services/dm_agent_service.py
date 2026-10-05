@@ -241,7 +241,7 @@ class DMAgentService:
             ),
             content=result.get(
                 "response",
-                "The host has no further information for you at this time.",
+                "主持人暂时没有更多可以补充的信息。",
             ),
             clue_ids=result.get("clue_ids",[]),
             tool_used=bool(result.get("tool_used", False)),
