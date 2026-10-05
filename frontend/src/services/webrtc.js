@@ -2,7 +2,13 @@ export class WebRTCVoiceClient {
   constructor({
     websocket,
     playerId,
-    iceServers = [],
+    // Host candidates are enough for localhost/LAN tests, but not for players
+    // behind different NATs. Public STUN servers let browsers discover their
+    // reachable candidates before we add a TURN relay for restrictive NATs.
+    iceServers = [
+      { urls: "stun:stun.cloudflare.com:3478" },
+      { urls: "stun:stun.l.google.com:19302" },
+    ],
     onRemoteStream = () => {},
     onPeerState = () => {},
     onSpeakingChange = () => {},
@@ -128,6 +134,15 @@ export class WebRTCVoiceClient {
       this.onPeerState(remotePlayerId, state);
       if (["failed", "closed", "disconnected"].includes(state)) {
         this.closePeer(remotePlayerId);
+      }
+    };
+
+    peer.connection.oniceconnectionstatechange = () => {
+      const state = peer.connection.iceConnectionState;
+      if (state === "failed") {
+        // Give the caller a useful state instead of silently leaving a dead
+        // peer in the voice roster. A later reconnect can create a new peer.
+        this.onPeerState(remotePlayerId, "failed");
       }
     };
 
