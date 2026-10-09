@@ -610,24 +610,32 @@ class GameService:
             self.room_repository.save(room_id)
             return []
 
-        clue = random.choice(candidates)
         target = release.get("target", "all")
+        mode = release.get("mode", "random_without_replacement")
+        if mode in {"fixed", "all"}:
+            selected_clues = candidates
+        else:
+            selected_clues = [random.choice(candidates)]
+
         if target == "all":
-            clue_id = clue["id"]
-            for player in room.get("players", []):
-                player_clues = player.setdefault("clue_ids", [])
-                if clue_id not in player_clues:
-                    player_clues.append(clue_id)
-            public_clue_ids = room.setdefault("public_clue_ids", [])
-            if clue_id not in public_clue_ids:
-                public_clue_ids.append(clue_id)
+            released = []
+            for clue in selected_clues:
+                clue_id = clue["id"]
+                for player in room.get("players", []):
+                    player_clues = player.setdefault("clue_ids", [])
+                    if clue_id not in player_clues:
+                        player_clues.append(clue_id)
+                public_clue_ids = room.setdefault("public_clue_ids", [])
+                if clue_id not in public_clue_ids:
+                    public_clue_ids.append(clue_id)
+                released.append({
+                    "target": "all",
+                    "clue_id": clue_id,
+                    "clue": clue,
+                })
             room["initial_clues_released"] = True
             self.room_repository.save(room_id)
-            return [{
-                "target": "all",
-                "clue_id": clue_id,
-                "clue": clue,
-            }]
+            return released
 
         # 私密模式下才按玩家分别发放；候选不足时允许重复。
         players = room.get("players", [])

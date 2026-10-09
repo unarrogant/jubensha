@@ -182,7 +182,6 @@ export class WebRTCVoiceClient {
     if (!peer || peer.connection.signalingState !== "have-local-offer") {
       return;
     }
-
     await peer.connection.setRemoteDescription(answer);
     await this.flushCandidates(peer);
   }

@@ -1,0 +1,7 @@
+{
+  "id":"laoshan-taoist","version":1,"title":"The Taoist of Mount Lao","type":"psychological_mystery","summary":"A failed wall-passing spell forces a scholar and a mountain temple to confront shame, pride, and a clean heart.","author":"Uncredited","player_count":6,"estimated_minutes":90,"cover":"assets/background.png","status":"published","entry_stage":"waiting","language":"en",
+  "agent_profile":{"id":"laoshan_dm_v1","display_name":"The Quiet Mountain","avatar":"assets/host.jpg","graph_type":"psychological_mystery","system_prompt":"prompts/dm_system.md","language":"en","style":["classical folklore","gentle","observant","reflective"]},
+  "data_files":{"characters":"characters.json","stages":"stages.json","locations":"locations.json","clues":"clues.json","unlock_rules":"unlock_rules.json","endings":"endings.json","vocabulary":"vocabulary.json"},
+  "vote_config":{"title":"Choose the best explanation","instruction":"Vote once for the explanation that best fits the evidence.","options":[{"id":"clean_heart","name":"The spell required a clean heart","description":"Wang Qi's divided motives made it fail at home."},{"id":"false_magic","name":"The master used an illusion","description":"The mountain magic was never real."},{"id":"bad_incantation","name":"The words were wrong","description":"The failure came from a technical mistake."}]},
+  "tags":["Chinese folklore","psychological deduction","growth","English practice"]
+}

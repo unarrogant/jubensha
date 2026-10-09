@@ -1,4 +1,5 @@
 import json
+import re
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -17,6 +18,20 @@ def build_dm_graph(checkpointer=None, tools=None):
     SUMMARY_TRIGGER_MESSAGES = 16
     SUMMARY_INPUT_MAX_CHARS = 14000
     SUMMARY_OUTPUT_MAX_CHARS = 6000
+
+    def clean_player_text(value: str) -> str:
+        """Remove provider protocol markers before text reaches the UI."""
+        if not isinstance(value, str):
+            return ""
+
+        cleaned = re.sub(
+            r"<\|/?(?:DSML|TOOL|END)\|>|\|/?(?:DSML|TOOL|END)\|",
+            "",
+            value,
+            flags=re.IGNORECASE,
+        )
+        cleaned = re.sub(r"\s{2,}", " ", cleaned)
+        return cleaned.strip()
 
     tools = tools or []
     config = get_deepseek_config()
@@ -461,6 +476,7 @@ def build_dm_graph(checkpointer=None, tools=None):
             else:
                 response_content = tool_result.get("content") or "主持人暂时没有更多可以补充的信息。"
 
+        response_content = clean_player_text(response_content)
         tool_called_this_turn = bool(state.get("tool_called_this_turn", False))
         return {
             "response": (

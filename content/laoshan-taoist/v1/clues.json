@@ -1,0 +1,12 @@
+[
+  {"id":"clue_01","title":"Keep the Heart Clean","level":1,"content":"The master warned Wang Qi: Keep your heart clean, or the spell will fail.","visibility":"public"},
+  {"id":"clue_02","title":"The Paper Moon","level":1,"content":"The moon that lit the hall became an ordinary paper circle the next morning.","visibility":"public"},
+  {"id":"clue_03","title":"The Work Ledger","level":1,"content":"Wang Qi repeatedly stopped working and stared downhill. A bark strip carries the character for child scholar.","visibility":"public"},
+  {"id":"clue_04","title":"The Wall Dent","level":2,"content":"The fresh impact mark proves Wang Qi ran into the wall at home.","visibility":"public"},
+  {"id":"clue_05","title":"Focused Transformation","level":2,"content":"The master's transformations worked while his attention was single and undivided.","visibility":"public"},
+  {"id":"clue_06","title":"The Examiner's Words","level":2,"content":"Wang Qi's essay was not hopeless; fear made his hand shake and his writing turn careless.","visibility":"public"},
+  {"id":"clue_07","title":"The Old Ink","level":2,"content":"The lost ink stick is carved with an examination year, linking Wang Qi to the provincial exam.","visibility":"public"},
+  {"id":"clue_08","title":"The Master's Lesson","level":3,"content":"The technique is real, but a mind divided by shame, display, and anger cannot carry it home.","visibility":"public"},
+  {"id":"clue_09","title":"The Unfinished Sentence","level":3,"content":"Wang Qi alternated between promising to pass next time and insisting there would be no next time.","visibility":"public"},
+  {"id":"clue_10","title":"The Temple Register","level":1,"content":"The temple register records that the wall-passing lesson was demonstrated successfully only when the student followed the master's breathing and focused attention.","visibility":"public"}
+]

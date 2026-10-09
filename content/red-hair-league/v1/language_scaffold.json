@@ -1,0 +1,55 @@
+{
+  "source_note": "主持人手册提供自我介绍支架与调查引导问题，没有单列词汇表；词汇栏据开场旁白和案件语境整理。",
+  "vocabulary": [
+    {
+      "category": "案件与地点",
+      "items": [
+        {"term": "pawn-broker", "meaning": "典当商"},
+        {"term": "pawnshop", "meaning": "当铺"},
+        {"term": "fraud", "meaning": "骗局；欺诈"},
+        {"term": "bank vault", "meaning": "银行金库"},
+        {"term": "basement", "meaning": "地下室"},
+        {"term": "tunnel", "meaning": "隧道"}
+      ]
+    },
+    {
+      "category": "调查与推理",
+      "items": [
+        {"term": "clue", "meaning": "线索"},
+        {"term": "evidence", "meaning": "证据"},
+        {"term": "suspect", "meaning": "嫌疑人；怀疑"},
+        {"term": "alibi", "meaning": "不在场证明"},
+        {"term": "motive", "meaning": "动机"},
+        {"term": "arrest", "meaning": "逮捕"},
+        {"term": "account book", "meaning": "账本"}
+      ]
+    }
+  ],
+  "sentence_patterns": [
+    {
+      "category": "角色介绍",
+      "items": [
+        {"pattern": "I am ...", "meaning": "我是……"},
+        {"pattern": "I came here because ...", "meaning": "我来到这里是因为……"},
+        {"pattern": "Tonight I hope to find out ...", "meaning": "今晚我希望查明……"}
+      ]
+    },
+    {
+      "category": "调查与质询",
+      "items": [
+        {"pattern": "Why pay four pounds just for copying books?", "meaning": "为什么仅仅抄书就付四英镑？"},
+        {"pattern": "If he develops photos, why have you never seen any photo?", "meaning": "如果他冲洗照片，你为什么从没见过照片？"},
+        {"pattern": "Where did a half-pay assistant get so much old money?", "meaning": "一个拿半薪的伙计怎么会有这么多旧钱？"},
+        {"pattern": "Can you explain this?", "meaning": "你能解释一下这个吗？"}
+      ]
+    },
+    {
+      "category": "证据与判断",
+      "items": [
+        {"pattern": "According to the clue ...", "meaning": "根据这条线索……"},
+        {"pattern": "The evidence suggests that ...", "meaning": "证据表明……"},
+        {"pattern": "Are guesses enough for Inspector Jones to arrest a man?", "meaning": "仅凭猜测就足以让琼斯警官逮捕一个人吗？"}
+      ]
+    }
+  ]
+}

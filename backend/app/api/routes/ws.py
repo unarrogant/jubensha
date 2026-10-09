@@ -5,15 +5,18 @@ from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from app.api.routes.rooms import (
+    broadcast_lobby,
     build_player_list,
     build_room_public,
     cancel_empty_room_cleanup,
+    cancel_waiting_player_cleanup,
     dm_agent_service,
     message_service,
     push_private_message,
     push_public_message,
     room_repository,
     schedule_empty_room_cleanup,
+    schedule_waiting_player_cleanup,
 )
 from app.realtime.connection_manager import connection_manager
 from app.schemas.message import PlayerPrivateMessageCreate
@@ -50,6 +53,7 @@ async def room_websocket(
         websocket,
     )
     cancel_empty_room_cleanup(room_id)
+    cancel_waiting_player_cleanup(room_id, player_id)
 
     try:
         await websocket.send_json({
@@ -211,6 +215,16 @@ async def room_websocket(
                         player_id=message_data.player_id,
                         content=message_data.content,
                     )
+                    room_repository.record_event(
+                        room_id,
+                        "PLAYER_MESSAGE",
+                        actor_player_id=player_id,
+                        payload={
+                            "message_id": player_message.get("id"),
+                            "content": message_data.content,
+                            "channel": "PRIVATE_MESSAGE",
+                        },
+                    )
                     await connection_manager.send_to_player(
                         room_id=room_id,
                         player_id=player_id,
@@ -281,6 +295,11 @@ async def room_websocket(
         )
 
         if player_disconnected:
+            current_room = room_repository.get(room_id)
+            if current_room and current_room.get("status") == "waiting":
+                schedule_waiting_player_cleanup(room_id, player_id)
+                return
+
             player["voice_muted"] = True
             room_repository.save(room_id)
             await connection_manager.broadcast_room(

@@ -17,7 +17,7 @@ import {
   WifiOff,
 } from "@lucide/vue";
 import AppHeader from "../components/AppHeader.vue";
-import { getRoom, getRoomPlayers, startRoom } from "../services/api";
+import { exitRoom as requestExitRoom, getRoom, getRoomPlayers, startRoom } from "../services/api";
 import { RoomWebSocket } from "../services/websocket";
 import { useRoomStore } from "../stores/room";
 
@@ -29,6 +29,7 @@ const players = ref([]);
 const loading = ref(true);
 const refreshing = ref(false);
 const starting = ref(false);
+const leaving = ref(false);
 const errorMessage = ref("");
 const connectionState = ref("connecting");
 const copied = ref(false);
@@ -131,6 +132,22 @@ async function handleStart() {
     errorMessage.value = error.message;
   } finally {
     starting.value = false;
+  }
+}
+
+async function handleLeave() {
+  if (!session.value?.playerId || leaving.value) return;
+  leaving.value = true;
+  errorMessage.value = "";
+  try {
+    await requestExitRoom(roomId.value, session.value.playerId);
+    roomSocket?.close();
+    roomStore.clearSession();
+    await router.replace("/");
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    leaving.value = false;
   }
 }
 
@@ -291,6 +308,9 @@ onBeforeUnmount(() => {
               <Play :size="17" fill="currentColor" />{{ starting ? "正在开局" : canStart ? "开始游戏" : `等待 ${missingPlayers} 人` }}
             </button>
             <p class="control-help">{{ canStart ? "人数符合要求，开局后自动分配角色。" : "人数必须与剧本要求完全一致才能开始。" }}</p>
+            <button class="lobby-leave-button" type="button" :disabled="leaving" @click="handleLeave">
+              {{ leaving ? "正在退出…" : isHost ? "退出并销毁房间" : "退出等待大厅" }}
+            </button>
           </aside>
         </div>
       </template>

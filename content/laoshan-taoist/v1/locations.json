@@ -1,0 +1,104 @@
+{
+  "stage_id": "investigation",
+  "locations": [
+    {
+      "id": "study",
+      "name": "Master's Study",
+      "description": "Incense hangs in the still air. Talismans cover the walls, and a brass lamp casts a steady circle of light over the master's desk.",
+      "searchable_objects": [
+        {
+          "id": "talisman_drawer",
+          "name": "talisman drawer",
+          "aliases": ["drawer", "talisman"],
+          "result": {"type": "clue", "clue_id": "clue_01", "message": "Behind the talismans lies a practice record showing that the master's famous feats rely on preparation and misdirection."}
+        },
+        {
+          "id": "brass_lamp",
+          "name": "brass lamp",
+          "aliases": ["lamp", "light"],
+          "result": {"type": "none", "message": "Only a clean wick and ordinary lamp oil."}
+        }
+      ]
+    },
+    {
+      "id": "wood_shed",
+      "name": "Wood Shed",
+      "description": "The shed smells of pine resin and damp earth. Fresh shavings cover the floor, while a narrow beam of sunlight reaches the back wall.",
+      "searchable_objects": [
+        {
+          "id": "hidden_compartment",
+          "name": "loose plank",
+          "aliases": ["plank", "wood", "compartment"],
+          "result": {"type": "clue", "clue_id": "clue_02", "message": "A loose plank conceals silk thread, fine paper, and a small mirror, enough to reproduce several of the master's tricks."}
+        },
+        {
+          "id": "axe",
+          "name": "axe",
+          "aliases": ["tool"],
+          "result": {"type": "none", "message": "The axe is worn from ordinary firewood work."}
+        }
+      ]
+    },
+    {
+      "id": "guest_room",
+      "name": "Guest Room",
+      "description": "A low bed stands beneath a paper window. The room is tidy, but the traveler's bundle has been opened and hastily tied again.",
+      "searchable_objects": [
+        {
+          "id": "traveler_bundle",
+          "name": "traveler's bundle",
+          "aliases": ["bundle", "luggage"],
+          "result": {"type": "clue", "clue_id": "clue_03", "message": "The bundle contains a copied account of the mountain visit, including details that could only have been learned from a rehearsal."}
+        },
+        {
+          "id": "paper_window",
+          "name": "paper window",
+          "aliases": ["window"],
+          "result": {"type": "none", "message": "The paper is thin and unmarked."}
+        }
+      ]
+    },
+    {
+      "id": "mountain_road",
+      "name": "Mountain Road",
+      "description": "Mist drifts across the stones. A line of footprints climbs toward the temple, interrupted where the path narrows beside the ravine.",
+      "searchable_objects": [
+        {
+          "id": "footprints",
+          "name": "footprints",
+          "aliases": ["tracks", "path"],
+          "result": {"type": "clue", "clue_id": "clue_04", "message": "The footprints begin with heavy boots and return with bare, careful steps, suggesting someone changed shoes before the demonstration."}
+        },
+        {
+          "id": "ravine_edge",
+          "name": "ravine edge",
+          "aliases": ["ravine", "cliff"],
+          "result": {"type": "none", "message": "Loose stones, but no hidden object."}
+        }
+      ]
+    },
+    {
+      "id": "moon_room",
+      "name": "Moon Room",
+      "description": "A round room opens beneath the eaves. Moonlight falls through a skylight onto a shallow wine bowl and a sheet of white paper.",
+      "searchable_objects": [
+        {
+          "id": "paper_moon",
+          "name": "paper moon",
+          "aliases": ["moon", "paper", "wine bowl"],
+          "result": {"type": "clue", "clue_id": "clue_05", "message": "The glowing moon is ordinary paper the next morning; the effect depends on the master's focused intention and a concealed light source."}
+        },
+        {
+          "id": "wine_bowl",
+          "name": "wine bowl",
+          "aliases": ["bowl", "wine"],
+          "result": {"type": "none", "message": "The bowl contains only clean water."}
+        }
+      ]
+    }
+  ],
+  "ambient_locations": [
+    {"id": "mountain_gate", "name": "Mountain Gate", "description": "Mist parts around the gate, revealing the valley far below."}
+  ],
+  "ambient_location_rule": {"send_clue": false, "message": "Give atmosphere only and never invent evidence."}
+}

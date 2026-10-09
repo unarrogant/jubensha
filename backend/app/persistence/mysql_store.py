@@ -47,6 +47,18 @@ class MysqlRoomStore:
                     """
                 )
             )
+            connection.execute(
+                self._text(
+                    """
+                    CREATE TABLE IF NOT EXISTS room_archives (
+                        room_id VARCHAR(64) PRIMARY KEY,
+                        payload JSON NOT NULL,
+                        archive_reason VARCHAR(128) NOT NULL,
+                        archived_at DATETIME(6) NOT NULL
+                    )
+                    """
+                )
+            )
 
     def save(self, room: dict[str, Any]) -> None:
         now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -114,6 +126,67 @@ class MysqlRoomStore:
             connection.execute(
                 self._text(
                     "DELETE FROM room_snapshots WHERE room_id = :room_id"
+                ),
+                {"room_id": room_id},
+            )
+
+    def archive(self, room: dict[str, Any], reason: str) -> None:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        payload = json.dumps(room, ensure_ascii=False, default=str)
+        with self._engine.begin() as connection:
+            connection.execute(
+                self._text(
+                    """
+                    INSERT INTO room_archives
+                        (room_id, payload, archive_reason, archived_at)
+                    VALUES
+                        (:room_id, :payload, :archive_reason, :archived_at)
+                    ON DUPLICATE KEY UPDATE
+                        payload = VALUES(payload),
+                        archive_reason = VALUES(archive_reason),
+                        archived_at = VALUES(archived_at)
+                    """
+                ),
+                {
+                    "room_id": room["id"],
+                    "payload": payload,
+                    "archive_reason": reason,
+                    "archived_at": now,
+                },
+            )
+
+    def get_archive(self, room_id: str) -> dict[str, Any] | None:
+        with self._engine.connect() as connection:
+            row = connection.execute(
+                self._text(
+                    "SELECT payload FROM room_archives WHERE room_id = :room_id"
+                ),
+                {"room_id": room_id},
+            ).mappings().first()
+        if row is None:
+            return None
+        payload = row["payload"]
+        return json.loads(payload) if isinstance(payload, str) else payload
+
+    def list_archives(self) -> list[dict[str, Any]]:
+        with self._engine.connect() as connection:
+            rows = connection.execute(
+                self._text(
+                    "SELECT payload FROM room_archives ORDER BY archived_at DESC"
+                )
+            ).mappings().all()
+        return [
+            json.loads(row["payload"])
+            if isinstance(row["payload"], str)
+            else row["payload"]
+            for row in rows
+        ]
+
+    def delete_archive(self, room_id: str) -> None:
+        with self._engine.begin() as connection:
+            connection.execute(
+                self._text(
+                    "DELETE FROM room_archives WHERE room_id = :room_id"
                 ),
                 {"room_id": room_id},
             )

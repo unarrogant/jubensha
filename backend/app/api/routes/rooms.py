@@ -71,13 +71,66 @@ game_orchestrator_service = GameOrchestratorService(
 )
 
 EMPTY_ROOM_GRACE_SECONDS = 60
+WAITING_PLAYER_GRACE_SECONDS = 20
 _empty_room_cleanup_tasks: dict[str, asyncio.Task] = {}
+_waiting_player_cleanup_tasks: dict[tuple[str, str], asyncio.Task] = {}
 
 
 def cancel_empty_room_cleanup(room_id: str) -> None:
     task = _empty_room_cleanup_tasks.pop(room_id, None)
     if task and not task.done():
         task.cancel()
+
+
+def cancel_waiting_player_cleanup(room_id: str, player_id: str) -> None:
+    task = _waiting_player_cleanup_tasks.pop((room_id, player_id), None)
+    if task and not task.done():
+        task.cancel()
+
+
+def schedule_waiting_player_cleanup(room_id: str, player_id: str) -> None:
+    cancel_waiting_player_cleanup(room_id, player_id)
+
+    async def cleanup() -> None:
+        current_task = asyncio.current_task()
+        try:
+            await asyncio.sleep(WAITING_PLAYER_GRACE_SECONDS)
+
+            if connection_manager.is_connected(room_id, player_id):
+                return
+
+            room = room_repository.get(room_id)
+            if room is None or room.get("status") != "waiting":
+                return
+
+            removal = room_repository.remove_waiting_player(room_id, player_id)
+            if removal.get("destroyed"):
+                game_orchestrator_service.stop(room_id)
+                connection_manager.remove_room(room_id)
+                room_repository.destroy(room_id)
+                return
+
+            if removal.get("removed"):
+                room_repository.record_event(
+                    room_id,
+                    "PLAYER_DISCONNECTED",
+                    actor_player_id=player_id,
+                    payload={"remaining_players": removal.get("remaining_players", 0)},
+                )
+                updated_room = room_repository.get(room_id)
+                if updated_room is not None:
+                    await broadcast_lobby(updated_room)
+        except asyncio.CancelledError:
+            return
+        finally:
+            key = (room_id, player_id)
+            if _waiting_player_cleanup_tasks.get(key) is current_task:
+                _waiting_player_cleanup_tasks.pop(key, None)
+
+    _waiting_player_cleanup_tasks[(room_id, player_id)] = asyncio.create_task(
+        cleanup(),
+        name=f"waiting-player-cleanup:{room_id}:{player_id}",
+    )
 
 
 def schedule_empty_room_cleanup(room_id: str) -> None:
@@ -98,7 +151,11 @@ def schedule_empty_room_cleanup(room_id: str) -> None:
 
             game_orchestrator_service.stop(room_id)
             connection_manager.remove_room(room_id)
-            room_repository.destroy(room_id)
+            room_repository.destroy(
+                room_id,
+                archive=True,
+                reason="all_players_offline",
+            )
         except asyncio.CancelledError:
             return
         finally:
@@ -156,6 +213,9 @@ def build_player_list(room:dict)->list[dict]:
             player.get("character_id"),
         )
         result.append({
+            # The client uses the stable player id to associate WebRTC
+            # speaking events with the matching portrait and role card.
+            "id": player["id"],
             "name":player["name"],
             "character_name":character.get("name") if character else None,
             "character_avatar":character.get("avatar") if character else None,
@@ -224,10 +284,16 @@ async def push_public_message(
 )
 async def create_room(data:RoomCreate):
     try:
-        return room_repository.create(
+        room = room_repository.create(
             script_id=data.script_id,
             host_name=data.host_name
         )
+        room_repository.record_event(
+            room["id"], "ROOM_CREATED",
+            actor_player_id=room.get("host_player_id"),
+            payload={"host_name": data.host_name},
+        )
+        return room
 
     except FileNotFoundError as error:
         raise HTTPException(
@@ -307,6 +373,10 @@ async def join_room(
         )
 
     room=room_repository.get(room_id)
+    room_repository.record_event(
+        room_id, "PLAYER_JOINED", actor_player_id=player.get("id"),
+        payload={"player_name": player.get("name")},
+    )
     await broadcast_lobby(room)
     return player
 
@@ -361,6 +431,18 @@ async def start_room(
         role_service.assign_roles(room_id)
         game_service.initialize(room_id)
         started_room=room_repository.start(room_id)
+        room_repository.record_event(
+            room_id, "GAME_STARTED", actor_player_id=data.host_player_id,
+            payload={
+                "player_count": started_room.get("player_count"),
+                "required_players": started_room.get("required_players"),
+            },
+        )
+        for player in started_room.get("players", []):
+            room_repository.record_event(
+                room_id, "ROLE_ASSIGNED", actor_player_id=player.get("id"),
+                payload={"character_id": player.get("character_id")},
+            )
         await broadcast_lobby(started_room, "GAME_STARTED")
         game_orchestrator_service.start(started_room["id"])
         return started_room
@@ -386,6 +468,37 @@ async def exit_room(room_id: str, data: RoomExit):
     if room is None:
         raise HTTPException(status_code=404, detail="房间不存在")
 
+    if room.get("status") == "waiting":
+        cancel_waiting_player_cleanup(room_id, data.player_id)
+        try:
+            result = room_repository.remove_waiting_player(room_id, data.player_id)
+        except (FileNotFoundError, ValueError) as error:
+            raise HTTPException(
+                status_code=404 if isinstance(error, FileNotFoundError) else 400,
+                detail=str(error),
+            ) from error
+
+        if result["destroyed"]:
+            cancel_empty_room_cleanup(room_id)
+            game_orchestrator_service.stop(room_id)
+            connection_manager.remove_room(room_id)
+            room_repository.destroy(room_id)
+            return {
+                **result,
+                "destroyed": True,
+            }
+
+        room_repository.record_event(
+            room_id,
+            "PLAYER_EXITED",
+            actor_player_id=data.player_id,
+            payload={"remaining_players": result["remaining_players"]},
+        )
+        updated_room = room_repository.get(room_id)
+        if updated_room is not None:
+            await broadcast_lobby(updated_room)
+        return result
+
     if room.get("status") != "ended":
         raise HTTPException(
             status_code=400,
@@ -403,6 +516,11 @@ async def exit_room(room_id: str, data: RoomExit):
             detail=str(error),
         ) from error
 
+    if not result["destroyed"]:
+        room_repository.record_event(
+            room_id, "PLAYER_EXITED", actor_player_id=data.player_id,
+            payload={"remaining_players": result["remaining_players"]},
+        )
     if result["destroyed"]:
         cancel_empty_room_cleanup(room_id)
         game_orchestrator_service.stop(room_id)
@@ -466,6 +584,10 @@ async def get_my_character(
                 "vocabulary",
                 {},
             ).get(character_id, [])
+            character_private["language_scaffold"] = bundle.get(
+                "language_scaffold",
+                {},
+            )
             return character_private
 
     raise HTTPException(
@@ -533,6 +655,15 @@ async def cast_vote(room_id:str, data:VoteCreate):
             player_id=data.player_id,
             suspect_id=data.suspect_id,
         )
+        room_repository.record_event(
+            room_id, "VOTE_CAST",
+            actor_player_id=data.player_id,
+            target_player_id=data.suspect_id,
+            payload={
+                "vote_count": result["vote_count"],
+                "required_votes": result["required_votes"],
+            },
+        )
         await connection_manager.broadcast_room(
             room_id=room_id,
             event={
@@ -579,6 +710,15 @@ async def submit_peer_review(room_id: str, data: PeerReviewCreate):
             best_speaker_id=data.best_speaker_id,
             best_reasoner_id=data.best_reasoner_id,
         )
+        room_repository.record_event(
+            room_id, "PEER_REVIEW_SUBMITTED",
+            actor_player_id=data.player_id,
+            payload={
+                "best_speaker_id": data.best_speaker_id,
+                "best_reasoner_id": data.best_reasoner_id,
+                "submitted_count": result["submitted_count"],
+            },
+        )
         await connection_manager.broadcast_room(
             room_id=room_id,
             event={
@@ -608,6 +748,10 @@ async def enter_location(
             room_id=room_id,
             player_id=data.player_id,
             location_id=data.location_id
+        )
+        room_repository.record_event(
+            room_id, "LOCATION_ENTERED", actor_player_id=data.player_id,
+            payload={"location_id": data.location_id, "message": result.get("message")},
         )
 
         await push_private_message(
@@ -643,6 +787,28 @@ async def inspect_object(
             location_id=data.location_id,
             object_text=data.object_text,
         )
+        room_repository.record_event(
+            room_id, "OBJECT_INSPECTED", actor_player_id=data.player_id,
+            payload={
+                "location_id": data.location_id,
+                "object_text": data.object_text,
+                "clue_id": result.get("clue_id"),
+                "message": result.get("message"),
+            },
+        )
+        if result.get("clue_id"):
+            room_repository.record_event(
+                room_id,
+                "CLUE_RELEASED",
+                actor_player_id=data.player_id,
+                target_player_id=data.player_id,
+                payload={
+                    "clue_id": result["clue_id"],
+                    "source": "investigation",
+                    "location_id": data.location_id,
+                    "object_text": data.object_text,
+                },
+            )
 
         await push_private_message(
             room_id=room_id,
@@ -720,11 +886,16 @@ async def send_message(
     data: PlayerPrivateMessageCreate,
 ):
     try:
-        return message_service.send_player_message(
+        message = message_service.send_player_message(
             room_id=room_id,
             player_id=data.player_id,
             content=data.content,
         )
+        room_repository.record_event(
+            room_id, "PLAYER_MESSAGE", actor_player_id=data.player_id,
+            payload={"message_id": message.get("id"), "content": data.content},
+        )
+        return message
     except FileNotFoundError as error:
         raise HTTPException(
             status_code=404,

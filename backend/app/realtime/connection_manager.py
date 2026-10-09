@@ -1,4 +1,4 @@
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 
 class ConnectionManager:
     def __init__(self):
@@ -73,11 +73,16 @@ class ConnectionManager:
     )->None:
         room_connections = self.connections.get(room_id, {})
 
-        for player_id, player_connections in room_connections.items():
+        for player_id, player_connections in list(room_connections.items()):
             if player_id == exclude_player_id:
                 continue
             for websocket in list(player_connections):
-                await websocket.send_json(event)
+                try:
+                    await websocket.send_json(event)
+                except (WebSocketDisconnect, RuntimeError, ConnectionError):
+                    # A browser may close while a broadcast is in flight.
+                    # Remove that socket and keep broadcasting to other players.
+                    self.disconnect(room_id, player_id, websocket)
 
     async def send_to_player(
         self,
@@ -91,6 +96,9 @@ class ConnectionManager:
         ).get(player_id, [])
 
         for websocket in list(player_connections):
-            await websocket.send_json(event)
+            try:
+                await websocket.send_json(event)
+            except (WebSocketDisconnect, RuntimeError, ConnectionError):
+                self.disconnect(room_id, player_id, websocket)
 
 connection_manager = ConnectionManager()

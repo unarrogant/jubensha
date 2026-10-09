@@ -1,0 +1,104 @@
+{
+  "stage_id": "investigation",
+  "locations": [
+    {
+      "id": "shop",
+      "name": "Red-Headed League Shop",
+      "description": "The narrow shop is closed for the evening. Dust lies on the counter, and a red fiber clings to the brass latch.",
+      "searchable_objects": [
+        {
+          "id": "ledger",
+          "name": "ledger",
+          "aliases": ["book", "accounts"],
+          "result": {"type": "clue", "clue_id": "clue_01", "message": "The ledger records payments for a position that required little work but kept a qualified man away from his own shop each afternoon."}
+        },
+        {
+          "id": "brass_latch",
+          "name": "brass latch",
+          "aliases": ["latch", "door"],
+          "result": {"type": "none", "message": "The latch has been handled by many customers."}
+        }
+      ]
+    },
+    {
+      "id": "office",
+      "name": "City Office",
+      "description": "A clerk's office smells of sealing wax and damp wool. A drawer stands open beside a stack of employment forms.",
+      "searchable_objects": [
+        {
+          "id": "employment_forms",
+          "name": "employment forms",
+          "aliases": ["forms", "papers"],
+          "result": {"type": "clue", "clue_id": "clue_02", "message": "Several forms use the same handwriting and address, despite being submitted under different names."}
+        },
+        {
+          "id": "wax_seal",
+          "name": "wax seal",
+          "aliases": ["seal", "wax"],
+          "result": {"type": "none", "message": "The seal belongs to the office and proves nothing by itself."}
+        }
+      ]
+    },
+    {
+      "id": "basement",
+      "name": "Basement Archive",
+      "description": "The basement is cool and crowded with crates. A fresh scrape marks the floor near a wall that should not have a second layer of brick.",
+      "searchable_objects": [
+        {
+          "id": "false_wall",
+          "name": "false wall",
+          "aliases": ["wall", "brick", "hidden passage"],
+          "result": {"type": "clue", "clue_id": "clue_03", "message": "Behind the false wall is a short passage leading toward the bank, explaining how the scheme could be entered from below."}
+        },
+        {
+          "id": "crates",
+          "name": "crates",
+          "aliases": ["boxes"],
+          "result": {"type": "none", "message": "The crates contain ordinary office supplies."}
+        }
+      ]
+    },
+    {
+      "id": "backyard",
+      "name": "Shop Backyard",
+      "description": "Rain has darkened the paving stones. A drain runs beneath the rear wall, and fresh mud reaches the edge of a locked gate.",
+      "searchable_objects": [
+        {
+          "id": "muddy_gate",
+          "name": "muddy gate",
+          "aliases": ["gate", "mud", "footprints"],
+          "result": {"type": "clue", "clue_id": "clue_04", "message": "The mud carries a narrow heel mark matching the shoes worn by the supposed clerk, not the broad boots seen at the front door."}
+        },
+        {
+          "id": "drain",
+          "name": "drain",
+          "aliases": ["pipe"],
+          "result": {"type": "none", "message": "Only rainwater and leaves collect in the drain."}
+        }
+      ]
+    },
+    {
+      "id": "street",
+      "name": "Street Outside the Bank",
+      "description": "Carriages have left parallel tracks in the wet street. The bank's side door is quiet, though a watchman remembers a late delivery.",
+      "searchable_objects": [
+        {
+          "id": "delivery_record",
+          "name": "delivery record",
+          "aliases": ["record", "watchman"],
+          "result": {"type": "clue", "clue_id": "clue_05", "message": "The delivery arrived before the robbery and was signed by a name connected to the league's recruiting office."}
+        },
+        {
+          "id": "carriage_tracks",
+          "name": "carriage tracks",
+          "aliases": ["tracks", "road"],
+          "result": {"type": "none", "message": "Too many carriages have passed to identify one set of tracks."}
+        }
+      ]
+    }
+  ],
+  "ambient_locations": [
+    {"id": "bank_hall", "name": "Bank Hall", "description": "The polished counters reflect the gaslight while clerks speak in lowered voices."}
+  ],
+  "ambient_location_rule": {"send_clue": false, "message": "Give atmosphere only and never invent evidence."}
+}

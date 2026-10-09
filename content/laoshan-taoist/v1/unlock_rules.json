@@ -1,0 +1,5 @@
+[
+  {"id":"rule_exam","type":"semantic_reasoning","description":"Connect the old ink, the bark character, and Wang Qi's hidden exam history.","example_phrases":["Wang Qi ran away after the exam","The ink proves he was a scholar"],"allowed_stages":["investigation","discussion"],"unlock_clues":["clue_06","clue_07"],"delivery":"triggering_player","once":true,"priority":10},
+  {"id":"rule_mind","type":"semantic_reasoning","description":"Explain why the spell worked at the temple but failed at home.","example_phrases":["His heart was not clean","He wanted to prove himself at home","His motives were divided"],"allowed_stages":["investigation","discussion"],"unlock_clues":["clue_08","clue_09"],"delivery":"triggering_player","once":true,"priority":20},
+  {"id":"rule_warning","type":"semantic_reasoning","description":"Interpret the master's warning as a lesson about intention rather than pronunciation.","example_phrases":["The warning was about his mind","The words were not the real problem"],"allowed_stages":["discussion"],"unlock_clues":["clue_08"],"delivery":"triggering_player","once":true,"priority":30}
+]

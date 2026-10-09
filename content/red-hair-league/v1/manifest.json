@@ -1,0 +1,18 @@
+{
+  "id": "red-hair-league",
+  "version": 1,
+  "title": "The Red-Headed League",
+  "type": "murder_mystery",
+  "summary": "A vanished league, a pawnshop basement, and a tunnel leading toward a bank vault.",
+  "author": "Uncredited",
+  "player_count": 6,
+  "estimated_minutes": 90,
+  "cover": "assets/background.png",
+  "status": "published",
+  "entry_stage": "waiting",
+  "language": "en",
+  "agent_profile": {"id":"red_hair_dm_v1","display_name":"The Baker Street Observer","avatar":"assets/host.jpg","graph_type":"murder_mystery","system_prompt":"prompts/dm_system.md","language":"en","style":["Victorian London","deductive","restrained","evidence-led"]},
+  "data_files": {"characters":"characters.json","stages":"stages.json","locations":"locations.json","clues":"clues.json","unlock_rules":"unlock_rules.json","endings":"endings.json","vocabulary":"vocabulary.json"},
+  "vote_config": {"title":"Choose the person most responsible","instruction":"Vote once after the discussion.","options":[{"id":"clay","name":"John Clay","description":"The hidden criminal behind the tunnel."},{"id":"ross","name":"Duncan Ross","description":"The organizer who recruited Wilson."},{"id":"wilson","name":"Jabez Wilson","description":"The pawnshop owner who accepted the deception."},{"id":"none","name":"No single culprit","description":"The evidence is not sufficient."}]},
+  "tags": ["Sherlock Holmes","deduction","Victorian London","English practice"]
+}

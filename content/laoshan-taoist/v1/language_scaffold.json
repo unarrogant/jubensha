@@ -1,0 +1,55 @@
+{
+  "source_note": "主持人手册提供自我介绍支架、阶段引导词和调查问题，没有单列词汇表；词汇栏据开场旁白与调查问题整理。",
+  "vocabulary": [
+    {
+      "category": "人物与道法",
+      "items": [
+        {"term": "scholar", "meaning": "读书人；学者"},
+        {"term": "Taoist priest", "meaning": "道士"},
+        {"term": "acolyte", "meaning": "道童；侍僧"},
+        {"term": "spell", "meaning": "法术；咒语"},
+        {"term": "wall-passing magic", "meaning": "穿墙术"},
+        {"term": "pure-minded", "meaning": "心无杂念的；心境纯净的"}
+      ]
+    },
+    {
+      "category": "调查与科举",
+      "items": [
+        {"term": "woodcutter", "meaning": "樵夫"},
+        {"term": "ink stick", "meaning": "墨锭"},
+        {"term": "essay", "meaning": "文章"},
+        {"term": "fail", "meaning": "失败；落第"},
+        {"term": "find out", "meaning": "查明；弄清"},
+        {"term": "motive", "meaning": "动机"}
+      ]
+    }
+  ],
+  "sentence_patterns": [
+    {
+      "category": "角色介绍",
+      "items": [
+        {"pattern": "I am ...", "meaning": "我是……"},
+        {"pattern": "I came here because ...", "meaning": "我来到这里是因为……"},
+        {"pattern": "Today I want to find out ...", "meaning": "今天我想查明……"}
+      ]
+    },
+    {
+      "category": "调查与追问",
+      "items": [
+        {"pattern": "If the spell worked in the temple, why did it fail at home?", "meaning": "如果法术在道观里有效，为什么回家后失灵了？"},
+        {"pattern": "What did the master mean by 'keep your heart clean'?", "meaning": "师父所说的“保持内心纯净”是什么意思？"},
+        {"pattern": "Why would a woodcutter carry an ink stick?", "meaning": "一个樵夫为什么会带着墨锭？"},
+        {"pattern": "Why does he write the character 'Tong' again and again?", "meaning": "他为什么一遍又一遍地写“童”字？"},
+        {"pattern": "If his essay was good, why did he fail?", "meaning": "如果他的文章写得不错，他为什么还是落第了？"}
+      ]
+    },
+    {
+      "category": "讨论与推理",
+      "items": [
+        {"pattern": "I believe ... because ...", "meaning": "我认为……，因为……"},
+        {"pattern": "The clue suggests that ...", "meaning": "这条线索暗示……"},
+        {"pattern": "What evidence supports this explanation?", "meaning": "有什么证据支持这个解释？"}
+      ]
+    }
+  ]
+}

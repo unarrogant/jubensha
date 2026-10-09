@@ -1,0 +1,85 @@
+{
+  "source_note": "词汇与功能句型摘自《年兽的故事》主持人手册的英语语言支持包。",
+  "vocabulary": [
+    {
+      "category": "故事核心",
+      "items": [
+        {"term": "mountain spirit", "meaning": "山灵"},
+        {"term": "scale", "meaning": "鳞片"},
+        {"term": "guardian", "meaning": "守护者"},
+        {"term": "misunderstanding", "meaning": "误解"},
+        {"term": "disaster warning", "meaning": "灾害预警"}
+      ]
+    },
+    {
+      "category": "搜证阶段",
+      "items": [
+        {"term": "clue", "meaning": "线索"},
+        {"term": "evidence", "meaning": "证据"},
+        {"term": "search", "meaning": "搜寻；调查"},
+        {"term": "discover", "meaning": "发现"},
+        {"term": "hide", "meaning": "隐藏"},
+        {"term": "witness", "meaning": "目击者；见证"},
+        {"term": "scar", "meaning": "伤疤"},
+        {"term": "notebook", "meaning": "笔记本"},
+        {"term": "account book", "meaning": "账本"}
+      ]
+    },
+    {
+      "category": "辩论阶段",
+      "items": [
+        {"term": "trust", "meaning": "信任"},
+        {"term": "doubt", "meaning": "怀疑"},
+        {"term": "proof", "meaning": "证明；证据"},
+        {"term": "tradition", "meaning": "传统"},
+        {"term": "truth", "meaning": "真相"},
+        {"term": "blame", "meaning": "责备；归咎"},
+        {"term": "rumor", "meaning": "传言"}
+      ]
+    },
+    {
+      "category": "抉择阶段",
+      "items": [
+        {"term": "forgive", "meaning": "原谅"},
+        {"term": "return", "meaning": "归还"},
+        {"term": "choice", "meaning": "选择"},
+        {"term": "consequence", "meaning": "后果"},
+        {"term": "make peace with", "meaning": "与……和解"}
+      ]
+    }
+  ],
+  "sentence_patterns": [
+    {
+      "category": "推理",
+      "items": [
+        {"pattern": "I believe ... because ...", "meaning": "我认为……，因为……"},
+        {"pattern": "The clue shows that ...", "meaning": "这条线索表明……"},
+        {"pattern": "If A is true, then B must be ...", "meaning": "如果 A 为真，那么 B 一定……"}
+      ]
+    },
+    {
+      "category": "质疑",
+      "items": [
+        {"pattern": "I doubt ... because ...", "meaning": "我怀疑……，因为……"},
+        {"pattern": "Can you prove it?", "meaning": "你能证明这一点吗？"},
+        {"pattern": "What if ...?", "meaning": "如果……呢？"},
+        {"pattern": "That doesn't explain ...", "meaning": "那仍然无法解释……"}
+      ]
+    },
+    {
+      "category": "协商",
+      "items": [
+        {"pattern": "I agree with ...", "meaning": "我同意……"},
+        {"pattern": "I see your point, but ...", "meaning": "我理解你的观点，但是……"},
+        {"pattern": "Let's vote on it.", "meaning": "我们投票决定吧。"}
+      ]
+    },
+    {
+      "category": "角色演绎",
+      "items": [
+        {"pattern": "As the village head, I must ...", "meaning": "作为村长，我必须……"},
+        {"pattern": "I have kept this secret for thirty years ...", "meaning": "这个秘密我已经守了三十年……"}
+      ]
+    }
+  ]
+}

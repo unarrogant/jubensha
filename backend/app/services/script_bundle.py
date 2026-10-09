@@ -38,6 +38,13 @@ class ScriptBundleLoader:
             file_path=version_dir/filename
             bundle[key]=self._load_json(file_path)
 
+        language_scaffold_path = version_dir / "language_scaffold.json"
+        bundle["language_scaffold"] = (
+            self._load_json(language_scaffold_path)
+            if language_scaffold_path.is_file()
+            else {}
+        )
+
         dm_prompt_path=version_dir/"prompts"/"dm_system.md"
 
         if not dm_prompt_path.is_file():

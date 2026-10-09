@@ -1,0 +1,14 @@
+[
+  {"id":"clue_01","title":"The Advertisement","level":1,"content":"The Times advertisement offers four pounds a week to red-haired men for easy work at 7 Pope's Lane.","visibility":"public"},
+  {"id":"clue_02","title":"Wilson's Contract","level":1,"content":"Wilson must copy the Encyclopaedia Britannica from ten to two and never leave the office.","visibility":"public"},
+  {"id":"clue_03","title":"The League Ledger","level":1,"content":"Payments are recorded under Duncan Ross, but the money came through an unnamed backer.","visibility":"public"},
+  {"id":"clue_04","title":"The Tunnel","level":1,"content":"The basement tunnel points directly toward the bank vault.","visibility":"public"},
+  {"id":"clue_05","title":"The Soil Bags","level":2,"content":"The bags carried from the basement contain soil, not photographic chemicals.","visibility":"public"},
+  {"id":"clue_06","title":"The Vanished Office","level":2,"content":"The League office was emptied immediately after the tunnel reached the bank wall.","visibility":"public"},
+  {"id":"clue_07","title":"The Left-Hand Scar","level":2,"content":"The wanted notice for John Clay describes a scar on the left hand, matching the assistant's hidden mark.","visibility":"public"},
+  {"id":"clue_08","title":"The Prison Record","level":2,"content":"John Clay was released eight weeks ago and has a history of organized burglary.","visibility":"public"},
+  {"id":"clue_09","title":"The Four-Hour Alibi","level":2,"content":"The League's schedule kept Wilson away from the basement exactly while the tunnel was being dug.","visibility":"public"},
+  {"id":"clue_10","title":"The Bank Plan","level":3,"content":"A rough plan connects the tunnel entrance to the bank vault's blind side.","visibility":"public"},
+  {"id":"clue_11","title":"Ross's Ledger","level":3,"content":"Ross received payments from Clay and was promised a share of the robbery.","visibility":"public"},
+  {"id":"clue_12","title":"The Assistant's Tools","level":3,"content":"Dirt, a mason's chalk, and a copied key were hidden beneath the assistant's workbench.","visibility":"public"}
+]

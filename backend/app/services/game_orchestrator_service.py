@@ -100,6 +100,12 @@ class GameOrchestratorService:
                 "message": message,
             },
         )
+        self.room_repository.record_event(
+            room_id,
+            "PUBLIC_MESSAGE",
+            payload={"message_id": message.get("id"), "content": content},
+            visibility="public",
+        )
 
     async def _release_initial_clues(self, room_id: str) -> None:
         released = self.game_service.release_initial_clues(room_id)
@@ -122,6 +128,12 @@ class GameOrchestratorService:
                         "message": message,
                     },
                 )
+                self.room_repository.record_event(
+                    room_id,
+                    "CLUE_RELEASED",
+                    payload={"clue_id": clue_id, "target": "all"},
+                    visibility="public",
+                )
                 continue
 
             message = self.dm_service.send_private(
@@ -140,6 +152,12 @@ class GameOrchestratorService:
                     "type": "PRIVATE_MESSAGE",
                     "message": message,
                 },
+            )
+            self.room_repository.record_event(
+                room_id,
+                "CLUE_RELEASED",
+                target_player_id=item["player_id"],
+                payload={"clue_id": clue_id, "target": "player"},
             )
 
     async def _announce_stage(self, room_id: str, event_type: str) -> None:
@@ -196,6 +214,13 @@ class GameOrchestratorService:
                 # 立即同步时仍读到 vote_open=false，从而隐藏投票面板。
                 current_room.setdefault("game", {})["vote_open"] = True
                 self.room_repository.save(room_id)
+
+            self.room_repository.record_event(
+                room_id,
+                "STAGE_ANNOUNCEMENT",
+                payload={"stage_id": stage_id, "event_type": event_type},
+                visibility="public",
+            )
 
             await self._publish_message(room_id, content)
 
@@ -256,8 +281,29 @@ class GameOrchestratorService:
                 if next_game.get("stage_id") == previous_stage_id:
                     continue
 
+                self.room_repository.record_event(
+                    room_id,
+                    "STAGE_CHANGED",
+                    payload={
+                        "previous_stage_id": previous_stage_id,
+                        "stage_id": next_game.get("stage_id"),
+                    },
+                    visibility="public",
+                )
+
                 if next_game.get("stage_id") == "ending":
-                    self.game_service.resolve_ending(room_id)
+                    ending = self.game_service.resolve_ending(room_id)
+                    self.room_repository.record_event(
+                        room_id,
+                        "GAME_ENDED",
+                        payload={
+                            "ending_id": ending.get("id"),
+                            "title": ending.get("title"),
+                            "vote_counts": ending.get("vote_counts", {}),
+                            "total_votes": ending.get("total_votes", 0),
+                        },
+                        visibility="public",
+                    )
 
                 await self._broadcast_stage_changed(room_id)
                 if next_game.get("stage_id") == "investigation":

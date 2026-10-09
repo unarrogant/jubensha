@@ -1,0 +1,14 @@
+[
+  {"id":"clue_01","title":"The Messenger's Letter","level":1,"content":"You fear me because you have truly seen me, or because your elders told you to fear me? Before sunset I will wait for your answer. Do you still remember me?","visibility":"public"},
+  {"id":"clue_02","title":"The Hidden Sentence","level":1,"content":"The back of the letter says: Tell him I am still waiting for his answer.","visibility":"public"},
+  {"id":"clue_03","title":"The Blue Cloth","level":1,"content":"A torn strip of blue cloth carries the smell of mountain rain and bears a scale-shaped stitch.","visibility":"public"},
+  {"id":"clue_04","title":"A Child's Witness","level":1,"content":"The messenger stepped back whenever villagers raised firecrackers. He never attacked anyone.","visibility":"public"},
+  {"id":"clue_05","title":"The Maker's Note","level":2,"content":"Ten years ago the firecracker maker found a cold luminous object in a mountain crevice and sold it.","visibility":"public"},
+  {"id":"clue_06","title":"The Hunter's Notebook","level":2,"content":"The hunter's warnings about strange wind and falling water precede every major storm recorded in the village.","visibility":"public"},
+  {"id":"clue_07","title":"The Merchant's Ledger","level":2,"content":"A ledger records an unusual scale sold for a price far beyond an ordinary stone.","visibility":"public"},
+  {"id":"clue_08","title":"The Old Tablet","level":2,"content":"The old record calls Nian a mountain guardian who governs rain and protects living things.","visibility":"public"},
+  {"id":"clue_09","title":"The Mountain Pattern","level":2,"content":"The pattern inside the scale matches the ridge and the stream above the village.","visibility":"public"},
+  {"id":"clue_10","title":"The Fallen Scale","level":1,"content":"The pale scale is real, cold, and still faintly luminous. It is not a weapon or a common stone.","visibility":"public"},
+  {"id":"clue_11","title":"The Three Misread Signs","level":3,"content":"A claw mark, a tail bone, and tracks around the village were attempts to communicate, repeatedly interpreted as threats.","visibility":"public"},
+  {"id":"clue_12","title":"The Guardian's Answer","level":3,"content":"When the scale is brought near the messenger, the mountain wind settles and the stream begins to run clear.","visibility":"public"}
+]

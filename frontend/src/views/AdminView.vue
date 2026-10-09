@@ -5,13 +5,22 @@ import {
   Activity,
   ChevronRight,
   Database,
+  Download,
   LogOut,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   Users,
   X,
 } from "@lucide/vue";
-import { getAdminAgentAudit, getAdminRoom, getAdminRooms } from "../services/api";
+import {
+  deleteAdminRoom,
+  exportAdminRoom,
+  getAdminAgentAudit,
+  getAdminRoom,
+  getAdminRoomSummary,
+  getAdminRooms,
+} from "../services/api";
 
 const router = useRouter();
 const token = localStorage.getItem("script_kill_admin_token");
@@ -19,11 +28,16 @@ const adminName = localStorage.getItem("script_kill_admin_username") || "管理�
 const rooms = ref([]);
 const selectedRoom = ref(null);
 const roomAudit = ref({ entries: [], peer_reviews: {} });
+const roomSummary = ref(null);
 const selectedRoomId = ref("");
 const loading = ref(true);
 const detailLoading = ref(false);
 const refreshing = ref(false);
 const errorMessage = ref("");
+const selectedPlayerId = ref("");
+const playerHistory = ref(null);
+const historyLoading = ref(false);
+const actionLoading = ref(false);
 let refreshTimer = null;
 
 const metrics = computed(() => ({
@@ -61,6 +75,10 @@ function roomVotes(room) {
   return votes && typeof votes === "object" ? Object.entries(votes) : [];
 }
 
+function playerSummary(playerId) {
+  return roomSummary.value?.players?.find((player) => player.player_id === playerId);
+}
+
 function isUnauthorized(error) {
   return error?.message?.includes("401") || error?.message?.includes("登录") || error?.message?.includes("过期");
 }
@@ -80,6 +98,8 @@ async function loadRooms({ quiet = false } = {}) {
     if (selectedRoomId.value && !rooms.value.some((room) => room.id === selectedRoomId.value)) {
       selectedRoomId.value = "";
       selectedRoom.value = null;
+      roomSummary.value = null;
+      playerHistory.value = null;
     }
   } catch (error) {
     if (isUnauthorized(error)) return signOut();
@@ -95,16 +115,21 @@ async function selectRoom(roomId, { quiet = false } = {}) {
   if (!quiet) {
     selectedRoom.value = null;
     roomAudit.value = { entries: [], peer_reviews: {} };
+    roomSummary.value = null;
+    selectedPlayerId.value = "";
+    playerHistory.value = null;
     detailLoading.value = true;
   }
   errorMessage.value = "";
   try {
-    const [roomDetail, audit] = await Promise.all([
+    const [roomDetail, audit, summary] = await Promise.all([
       getAdminRoom(roomId, token),
       getAdminAgentAudit(roomId, token),
+      getAdminRoomSummary(roomId, token),
     ]);
     selectedRoom.value = roomDetail;
     roomAudit.value = audit;
+    roomSummary.value = summary;
   } catch (error) {
     if (isUnauthorized(error)) return signOut();
     errorMessage.value = error.message || "房间详情加载失败";
@@ -117,6 +142,59 @@ function closeDetail() {
   selectedRoomId.value = "";
   selectedRoom.value = null;
   roomAudit.value = { entries: [], peer_reviews: {} };
+  roomSummary.value = null;
+  playerHistory.value = null;
+  selectedPlayerId.value = "";
+}
+
+async function selectPlayer(playerId) {
+  if (!selectedRoomId.value || !playerId) return;
+  selectedPlayerId.value = playerId;
+  historyLoading.value = true;
+  try {
+    playerHistory.value = await getAdminPlayerHistory(selectedRoomId.value, playerId, token);
+  } catch (error) {
+    if (isUnauthorized(error)) return signOut();
+    errorMessage.value = error.message || "玩家历史加载失败";
+  } finally {
+    historyLoading.value = false;
+  }
+}
+
+async function downloadRoomExport() {
+  if (!selectedRoomId.value || actionLoading.value) return;
+  actionLoading.value = true;
+  try {
+    const blob = await exportAdminRoom(selectedRoomId.value, token);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `room-${selectedRoomId.value}-admin-export.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    if (isUnauthorized(error)) return signOut();
+    errorMessage.value = error.message || "导出失败";
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function removeRoom() {
+  if (!selectedRoomId.value || actionLoading.value) return;
+  const roomId = selectedRoomId.value;
+  if (!window.confirm(`确定永久删除房间 ${roomId} 及其全部历史记录吗？此操作不可恢复。`)) return;
+  actionLoading.value = true;
+  try {
+    await deleteAdminRoom(roomId, token);
+    closeDetail();
+    await loadRooms({ quiet: true });
+  } catch (error) {
+    if (isUnauthorized(error)) return signOut();
+    errorMessage.value = error.message || "删除失败";
+  } finally {
+    actionLoading.value = false;
+  }
 }
 
 function peerReviewRows(room) {
@@ -206,7 +284,11 @@ onBeforeUnmount(() => {
           <template v-else-if="selectedRoom">
             <div class="admin-detail-heading">
               <div><span>ROOM SNAPSHOT</span><h2>{{ selectedRoom.id }}</h2></div>
-              <button class="admin-close-button" type="button" aria-label="关闭详情" title="关闭详情" @click="closeDetail"><X :size="17" /></button>
+              <div class="admin-detail-actions">
+                <button class="icon-text-button" type="button" :disabled="actionLoading" title="导出完整 JSON" @click="downloadRoomExport"><Download :size="14" />导出</button>
+                <button class="icon-text-button danger" type="button" :disabled="actionLoading" title="永久删除房间" @click="removeRoom"><Trash2 :size="14" />删除</button>
+                <button class="admin-close-button" type="button" aria-label="关闭详情" title="关闭详情" @click="closeDetail"><X :size="17" /></button>
+              </div>
             </div>
             <dl class="detail-facts">
               <div><dt>剧本</dt><dd>{{ selectedRoom.script_id }} / v{{ selectedRoom.script_version }}</dd></div>
@@ -217,12 +299,46 @@ onBeforeUnmount(() => {
             <div class="detail-section">
               <h3>玩家 <span>{{ roomPlayers(selectedRoom).length }}</span></h3>
               <div v-if="roomPlayers(selectedRoom).length" class="detail-player-list">
-                <div v-for="player in roomPlayers(selectedRoom)" :key="player.id || player.name">
-                  <strong>{{ player.name || player.id }}</strong>
-                  <small>{{ player.character_name || player.character_id || "未分配角色" }}</small>
-                </div>
+                <button v-for="player in roomPlayers(selectedRoom)" :key="player.id || player.name" type="button" :class="{ selected: selectedPlayerId === player.id }" @click="selectPlayer(player.id)">
+                  <span class="admin-player-primary">
+                    <strong>{{ player.name || player.id }}</strong>
+                    <small>{{ player.character_name || player.character_id || "未分配角色" }}</small>
+                  </span>
+                  <small class="admin-player-activity">
+                    发言 {{ playerSummary(player.id)?.message_count || 0 }} ·
+                    提问 {{ playerSummary(player.id)?.question_count || 0 }} ·
+                    线索 {{ playerSummary(player.id)?.clue_count || 0 }} ·
+                    {{ playerSummary(player.id)?.has_voted ? "已投票" : "未投票" }}
+                  </small>
+                </button>
               </div>
               <p v-else class="detail-muted">暂无玩家数据</p>
+            </div>
+            <div v-if="roomSummary" class="detail-section admin-summary-section">
+              <h3>本局运行指标 <span>{{ roomSummary.event_count }} 个事件</span></h3>
+              <div class="detail-stat-grid summary-stat-grid">
+                <div><span>玩家发言</span><strong>{{ roomSummary.message_count }}</strong></div>
+                <div><span>AI 请求</span><strong>{{ roomSummary.ai?.request_count || 0 }}</strong></div>
+                <div><span>工具调用</span><strong>{{ roomSummary.ai?.tool_call_count || 0 }}</strong></div>
+                <div><span>搜证操作</span><strong>{{ roomSummary.investigation_count }}</strong></div>
+                <div><span>投票人数</span><strong>{{ roomSummary.vote_count }} / {{ roomSummary.player_count }}</strong></div>
+                <div><span>投票状态</span><strong>{{ !roomSummary.vote_count ? "尚未投票" : roomSummary.vote_tied ? "平票" : "已形成分布" }}</strong></div>
+              </div>
+              <p v-if="roomSummary.ending" class="summary-ending"><b>最终结局：</b>{{ roomSummary.ending.title || roomSummary.ending.id }}</p>
+              <p v-else class="detail-muted">结局尚未生成；投票只展示分布，不评价对错。</p>
+            </div>
+            <div v-if="selectedPlayerId" class="detail-section admin-audit-section">
+              <h3>玩家历史 <span>{{ playerHistory?.events?.length || 0 }} 个事件</span></h3>
+              <p v-if="historyLoading" class="detail-muted">正在读取玩家历史...</p>
+              <template v-else-if="playerHistory">
+                <div class="player-history-list">
+                  <div v-for="event in [...(playerHistory.events || [])].reverse()" :key="event.id">
+                    <strong>{{ event.event_type }}</strong>
+                    <small>{{ formatDate(event.created_at) }}</small>
+                    <p>{{ JSON.stringify(event.payload) }}</p>
+                  </div>
+                </div>
+              </template>
             </div>
             <div class="detail-stat-grid">
               <div><span>消息</span><strong>{{ roomMessages(selectedRoom).length }}</strong></div>
@@ -303,6 +419,10 @@ onBeforeUnmount(() => {
 .room-capacity { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .admin-empty, .admin-detail-loading { min-height: 180px; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
 .admin-detail-panel { min-height: 420px; padding: 17px; }
+.admin-detail-actions { display: flex; align-items: center; gap: 6px; }
+.admin-detail-actions .icon-text-button { min-height: 29px; padding: 0 7px; color: var(--green-strong); background: #f5f8f5; border: 1px solid var(--line); border-radius: 4px; font-size: 10px; }
+.admin-detail-actions .icon-text-button.danger { color: #8a3035; }
+.admin-detail-actions .icon-text-button:disabled { opacity: .55; }
 .admin-detail-heading { display: flex; align-items: start; justify-content: space-between; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .admin-detail-heading span { color: var(--red); font-size: 9px; font-weight: 800; letter-spacing: .07em; }
 .admin-detail-heading h2 { margin: 5px 0 0; font-family: Consolas, monospace; font-size: 18px; }
@@ -315,16 +435,27 @@ onBeforeUnmount(() => {
 .detail-section h3 { display: flex; justify-content: space-between; margin: 0 0 9px; font-size: 11px; }
 .detail-section h3 span { color: var(--muted); font-weight: 400; }
 .detail-player-list { display: grid; gap: 7px; }
-.detail-player-list div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 8px; background: #f6f8f6; border-left: 2px solid var(--green); }
+.detail-player-list button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 8px; color: inherit; background: #f6f8f6; border: 0; border-left: 2px solid var(--green); text-align: left; cursor: pointer; }
+.detail-player-list button:hover, .detail-player-list button.selected { background: #e8f2eb; }
+.admin-player-primary { display: grid; min-width: 70px; }
 .detail-player-list strong, .detail-player-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail-player-list strong { font-size: 10px; }
 .detail-player-list small { color: var(--muted); font-size: 9px; }
+.detail-player-list .admin-player-activity { text-align: right; }
 .detail-muted { margin: 0; color: var(--muted); font-size: 10px; }
 .detail-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 15px 0; }
 .detail-stat-grid div { padding: 9px; background: #f6f8f6; }
 .detail-stat-grid span, .detail-stat-grid strong { display: block; }
 .detail-stat-grid span { color: var(--muted); font-size: 9px; }
 .detail-stat-grid strong { margin-top: 4px; font-size: 16px; }
+.summary-stat-grid { grid-template-columns: repeat(3, 1fr); padding: 0; }
+.summary-ending { margin: 10px 0 0; color: #315e43; font-size: 10px; line-height: 1.5; }
+.player-history-list { display: grid; gap: 7px; max-height: 300px; overflow: auto; }
+.player-history-list > div { padding: 8px; background: #f6f8f6; border-left: 2px solid #789b82; }
+.player-history-list strong, .player-history-list small { display: inline-block; }
+.player-history-list strong { color: var(--green-strong); font-size: 9px; }
+.player-history-list small { margin-left: 8px; color: var(--muted); font-size: 9px; }
+.player-history-list p { margin: 5px 0 0; color: #536057; font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
 .raw-snapshot { border-top: 1px solid var(--line); padding-top: 12px; }
 .raw-snapshot summary { color: var(--green); cursor: pointer; font-size: 10px; font-weight: 700; }
 .raw-snapshot pre { max-height: 260px; overflow: auto; margin: 10px 0 0; padding: 10px; color: #4e5a52; background: #f4f6f4; font-size: 9px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }

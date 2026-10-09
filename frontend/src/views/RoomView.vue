@@ -55,6 +55,7 @@ const stageAnnouncementPending = ref(false);
 const errorMessage = ref("");
 const connectionState = ref("connecting");
 const activeCaseTab = ref("clues");
+const activeScaffoldTab = ref("vocabulary");
 const remainingSeconds = ref(null);
 const voteStatus = ref({
   has_voted: false,
@@ -126,7 +127,6 @@ const currentStageTask = computed(() =>
   stageTasks[gameState.value?.stage_id]
   || "Wait for the host to announce the next instruction.",
 );
-const englishPhraseNotes = ref([]);
 const canExitRoom = computed(
   () => Boolean(room.value),
 );
@@ -155,6 +155,7 @@ const characterAvatarUrl = computed(() =>
   roomStore.getAssetUrl(script.value, character.value?.avatar),
 );
 const characterVocabulary = computed(() => character.value?.vocabulary || []);
+const languageScaffold = computed(() => character.value?.language_scaffold || {});
 const hostAvatarUrl = computed(() =>
   roomStore.getAssetUrl(script.value, script.value?.agent_profile?.avatar),
 );
@@ -192,13 +193,56 @@ const endingStory = computed(() => {
   );
 });
 const stageSpeechPrompts = {
-  intro: "自我介绍阶段开始。请介绍公开身份，保留秘密，并在需要时向主持人提问。",
-  investigation: "搜证阶段开始。请选择地点、检查物品，或向主持人提交推理。",
-  discussion: "讨论阶段开始。请分享线索、质疑观点，并整理自己的推理。",
-  voting: "最终投票阶段开始。请完成一次投票。",
-  ending: "最终复盘开始。请听主持人还原经过并公布每位角色的命运。",
+  waiting: "The room is waiting for players. Please wait until the cast is complete.",
+  role_selection: "Role assignment has begun. Check your character information and wait for the host to start.",
+  intro: "The introduction phase has begun. Introduce your public identity, keep your secrets private, and ask the host questions when needed.",
+  investigation: "The investigation phase has begun. Search locations, inspect objects, or submit a deduction to the host.",
+  discussion: "The discussion phase has begun. Share evidence, challenge theories, and organize your deductions.",
+  voting: "The final voting phase has begun. Please cast your vote.",
+  ending: "The final review has begun. Listen as the host reconstructs the case and reveals every character's fate.",
 };
 const spokenStageKeys = new Set();
+let pendingStageSpeech = null;
+
+function hasSpokenStage(stageKey) {
+  if (spokenStageKeys.has(stageKey)) return true;
+  try {
+    return window.sessionStorage.getItem(`stage-voice:${stageKey}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberSpokenStage(stageKey) {
+  spokenStageKeys.add(stageKey);
+  try {
+    window.sessionStorage.setItem(`stage-voice:${stageKey}`, "1");
+  } catch {
+    // 语音记录不是游戏状态，存储不可用时不影响游戏流程。
+  }
+}
+
+function playPendingStageSpeech() {
+  const pending = pendingStageSpeech;
+  if (!pending || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(pending.prompt);
+  utterance.lang = "en-US";
+  utterance.rate = 0.95;
+  utterance.pitch = 1;
+  utterance.onstart = () => {
+    rememberSpokenStage(pending.stageKey);
+    if (pendingStageSpeech?.stageKey === pending.stageKey) {
+      pendingStageSpeech = null;
+    }
+  };
+  utterance.onerror = () => {
+    // 浏览器未获得用户手势时保留待播报内容，下一次点击页面会重试。
+    pendingStageSpeech = pending;
+  };
+  window.speechSynthesis.speak(utterance);
+}
 
 function speakStagePrompt(state) {
   const stageId = state?.stage_id;
@@ -206,26 +250,35 @@ function speakStagePrompt(state) {
   if (!prompt || typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
   const stageKey = `${roomId.value}:${stageId}:${state?.stage_started_at || ""}`;
-  if (spokenStageKeys.has(stageKey)) return;
+  if (hasSpokenStage(stageKey)) return;
+  if (pendingStageSpeech?.stageKey === stageKey) return;
 
-  try {
-    if (window.sessionStorage.getItem(`stage-voice:${stageKey}`) === "1") return;
-    window.sessionStorage.setItem(`stage-voice:${stageKey}`, "1");
-  } catch {
-    // 语音提示不是游戏状态，存储不可用时仍然允许本次播放。
+  pendingStageSpeech = { stageKey, prompt };
+  playPendingStageSpeech();
+}
+
+function retryPendingStageSpeech() {
+  if (pendingStageSpeech) playPendingStageSpeech();
+}
+
+function resumeVoiceAudio() {
+  void voiceClient?.resumeAudioAnalysis();
+  if (remoteAudioContainer.value) {
+    for (const audio of remoteAudioContainer.value.querySelectorAll("audio")) {
+      audio.play().catch(() => {});
+    }
   }
-
-  spokenStageKeys.add(stageKey);
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(prompt);
-  utterance.lang = "en-US";
-  utterance.rate = 0.95;
-  utterance.pitch = 1;
-  window.speechSynthesis.speak(utterance);
 }
 
 function getPlayerAvatarUrl(player) {
   return roomStore.getAssetUrl(script.value, player?.character_avatar);
+}
+
+// 没有角色图片的剧本也要保留角色视觉标识。
+// 优先取角色名称首字，只有角色名称尚未公开时才回退到玩家昵称。
+function getPlayerAvatarInitial(player) {
+  const label = String(player?.character_name || player?.name || "?").trim();
+  return Array.from(label)[0] || "?";
 }
 
 function getRelationshipName(relationship) {
@@ -569,6 +622,7 @@ async function connectRoom() {
   roomSocket.on("open", () => {
     connectionState.value = "online";
     void syncPublicPlayers();
+    // Re-announce the current microphone state after every reconnect.
     if (voiceEnabled.value) publishVoiceState();
     if (hasConnectedOnce) void syncGameState();
     hasConnectedOnce = true;
@@ -765,7 +819,7 @@ async function leaveRoom() {
 
   errorMessage.value = "";
   try {
-    if (room.value?.status === "ended") {
+    if (room.value?.status === "waiting" || room.value?.status === "ended") {
       await requestExitRoom(roomId.value, session.value.playerId);
     }
     roomSocket?.close();
@@ -786,6 +840,8 @@ function formatMessageTime(value) {
 }
 
 onMounted(async () => {
+  window.addEventListener("pointerdown", retryPendingStageSpeech, { passive: true });
+  window.addEventListener("pointerdown", resumeVoiceAudio, { passive: true });
   await loadGame();
   if (!session.value?.playerId || !room.value) return;
 
@@ -802,6 +858,8 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener("pointerdown", retryPendingStageSpeech);
+  window.removeEventListener("pointerdown", resumeVoiceAudio);
   roomSocket?.close();
   voiceClient?.close();
   if (clockTimer) window.clearInterval(clockTimer);
@@ -972,7 +1030,7 @@ onBeforeUnmount(() => {
             <h2 class="rail-title"><Users :size="15" />Public Cast</h2>
             <div
               v-for="(player, index) in players"
-              :key="`${player.name}-${index}`"
+              :key="player.id || `${player.name}-${index}`"
               class="cast-item"
               :class="{ speaking: speakingPlayerIds.includes(player.id) }"
             >
@@ -982,7 +1040,7 @@ onBeforeUnmount(() => {
                   :src="getPlayerAvatarUrl(player)"
                   :alt="player.character_name || player.name"
                 />
-                <template v-else>{{ player.name.slice(0, 1) }}</template>
+                <template v-else>{{ getPlayerAvatarInitial(player) }}</template>
                 <i v-if="speakingPlayerIds.includes(player.id)" class="cast-speaking-ring"></i>
               </span>
               <div>
@@ -1018,7 +1076,7 @@ onBeforeUnmount(() => {
                     :src="getPlayerAvatarUrl(currentSpeakingPlayer)"
                     :alt="currentSpeakingPlayer.character_name || currentSpeakingPlayer.name"
                   />
-                  <span v-else>{{ (currentSpeakingPlayer.character_name || currentSpeakingPlayer.name || "?").slice(0, 1) }}</span>
+                  <span v-else>{{ getPlayerAvatarInitial(currentSpeakingPlayer) }}</span>
                 </div>
                 <div class="meeting-speaker-copy">
                   <span class="meeting-live-label"><Mic :size="13" />SPEAKING NOW</span>
@@ -1291,7 +1349,7 @@ onBeforeUnmount(() => {
               :aria-selected="activeCaseTab === 'phrases'"
               @click="activeCaseTab = 'phrases'"
             >
-              <FileKey2 :size="15" />Phrases
+              <FileKey2 :size="15" />语言脚手架
             </button>
           </div>
 
@@ -1327,15 +1385,61 @@ onBeforeUnmount(() => {
 
           <div v-else class="case-content speaking-notes-content">
             <header class="case-heading">
-              <span class="overline">SPEAKING SUPPORT</span>
-              <h2>建议句式</h2>
+              <span class="overline">LANGUAGE SCAFFOLD</span>
+              <h2>语言脚手架</h2>
             </header>
-            <ul v-if="englishPhraseNotes.length" class="english-phrase-list">
-              <li v-for="note in englishPhraseNotes" :key="note">{{ note }}</li>
-            </ul>
-            <div v-else class="case-empty phrase-empty">
-              <FileKey2 :size="25" />
-              <span>适合当前阶段的建议句式会记录在这里。</span>
+            <div class="scaffold-tabs" role="tablist" aria-label="词汇和句型">
+              <button
+                type="button"
+                role="tab"
+                :class="{ active: activeScaffoldTab === 'vocabulary' }"
+                :aria-selected="activeScaffoldTab === 'vocabulary'"
+                @click="activeScaffoldTab = 'vocabulary'"
+              >词汇</button>
+              <button
+                type="button"
+                role="tab"
+                :class="{ active: activeScaffoldTab === 'sentences' }"
+                :aria-selected="activeScaffoldTab === 'sentences'"
+                @click="activeScaffoldTab = 'sentences'"
+              >句型</button>
+            </div>
+
+            <div v-if="activeScaffoldTab === 'vocabulary'" class="scaffold-groups">
+              <section
+                v-for="group in languageScaffold.vocabulary || []"
+                :key="group.category"
+                class="scaffold-group"
+              >
+                <h3>{{ group.category }}</h3>
+                <article v-for="item in group.items" :key="item.term" class="scaffold-item">
+                  <strong>{{ item.term }}</strong>
+                  <span>{{ item.meaning }}</span>
+                  <small v-if="item.example">{{ item.example }}</small>
+                </article>
+              </section>
+              <div v-if="!languageScaffold.vocabulary?.length" class="case-empty phrase-empty">
+                <BookOpen :size="25" />
+                <span>该剧本暂未整理词汇。</span>
+              </div>
+            </div>
+
+            <div v-else class="scaffold-groups">
+              <section
+                v-for="group in languageScaffold.sentence_patterns || []"
+                :key="group.category"
+                class="scaffold-group"
+              >
+                <h3>{{ group.category }}</h3>
+                <article v-for="item in group.items" :key="item.pattern" class="scaffold-item">
+                  <strong>{{ item.pattern }}</strong>
+                  <span v-if="item.meaning">{{ item.meaning }}</span>
+                </article>
+              </section>
+              <div v-if="!languageScaffold.sentence_patterns?.length" class="case-empty phrase-empty">
+                <FileKey2 :size="25" />
+                <span>该剧本暂未整理句型。</span>
+              </div>
             </div>
           </div>
         </aside>

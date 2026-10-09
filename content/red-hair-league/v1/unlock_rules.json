@@ -1,0 +1,5 @@
+[
+  {"id":"rule_tunnel","type":"semantic_reasoning","description":"Connect the League schedule with the tunnel beneath the shop.","example_phrases":["The four hours were an alibi","Wilson was kept away while they dug"],"allowed_stages":["investigation","discussion"],"unlock_clues":["clue_09","clue_10"],"delivery":"triggering_player","once":true,"priority":10},
+  {"id":"rule_clay","type":"semantic_reasoning","description":"Identify the assistant as John Clay using the scar and prison record.","example_phrases":["The assistant is Clay","The scar matches the wanted notice"],"allowed_stages":["investigation","discussion"],"unlock_clues":["clue_07","clue_08"],"delivery":"triggering_player","once":true,"priority":20},
+  {"id":"rule_ross","type":"semantic_reasoning","description":"Connect Ross's contract and ledger to Clay's plan.","example_phrases":["Ross was paid","The League was created to distract Wilson"],"allowed_stages":["discussion"],"unlock_clues":["clue_11","clue_12"],"delivery":"triggering_player","once":true,"priority":30}
+]

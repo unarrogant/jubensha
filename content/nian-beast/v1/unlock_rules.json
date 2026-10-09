@@ -1,0 +1,5 @@
+[
+  {"id":"rule_maker","type":"semantic_reasoning","description":"Connect the maker, the scale, and the merchant's purchase.","example_phrases":["The maker sold the scale","The merchant has the object"],"allowed_stages":["investigation","discussion"],"unlock_clues":["clue_07"],"delivery":"triggering_player","once":true,"priority":10},
+  {"id":"rule_guardian","type":"semantic_reasoning","description":"Reason that Nian may be a guardian rather than a monster.","example_phrases":["Nian protects the mountain","The old story was misunderstood"],"allowed_stages":["investigation","discussion"],"unlock_clues":["clue_08","clue_11"],"delivery":"triggering_player","once":true,"priority":20},
+  {"id":"rule_return","type":"semantic_reasoning","description":"Connect the scale's return with the mountain and the stream.","example_phrases":["Return the scale","The mountain will heal"],"allowed_stages":["discussion"],"unlock_clues":["clue_12"],"delivery":"triggering_player","once":true,"priority":30}
+]

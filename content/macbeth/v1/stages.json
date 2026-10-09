@@ -46,12 +46,10 @@
     "allowed_actions": ["speak", "view_clue", "enter_location", "inspect_object", "share_clue", "submit_reasoning", "private_character_query"],
     "forbidden_actions": ["vote"],
     "initial_clue_release": {
-      "mode": "random_without_replacement",
-      "min_count": 1,
-      "max_count": 1,
-      "pool": ["clue_01", "clue_02", "clue_03", "clue_04", "clue_09", "clue_10"],
+      "mode": "fixed",
+      "pool": ["clue_01"],
       "target": "all",
-      "avoid_same_opening_between_sessions": true
+      "delivery_note": "Release every clue in this pool at the start of investigation; do not randomize."
     },
     "next_stage": "discussion",
     "manual_transition": false,

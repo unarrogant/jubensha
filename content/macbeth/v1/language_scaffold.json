@@ -1,0 +1,91 @@
+{
+  "source_note": "整理自《被诅咒的王座》语言补丁：词汇表与功能句型包。",
+  "vocabulary": [
+    {
+      "category": "人物与身份",
+      "items": [
+        {"term": "Thane / Lord", "meaning": "爵士；领主", "example": "Macbeth was made the Thane of Cawdor."},
+        {"term": "Heir", "meaning": "继承人", "example": "Malcolm is the rightful heir to the throne."},
+        {"term": "Loyalist", "meaning": "忠臣", "example": "Banquo is known as a loyalist to the kingdom."},
+        {"term": "Suspect (n.)", "meaning": "嫌疑人", "example": "Everyone becomes a suspect in the king's murder."}
+      ]
+    },
+    {
+      "category": "动机与情感",
+      "items": [
+        {"term": "Prophecy", "meaning": "预言", "example": "The witches' prophecy changed everything."},
+        {"term": "Ambition", "meaning": "野心；抱负", "example": "Ambition can drive a man to great deeds, or terrible crimes."},
+        {"term": "Betrayal", "meaning": "背叛", "example": "The murder of King Duncan was a terrible betrayal."},
+        {"term": "Jealousy", "meaning": "嫉妒", "example": "He felt jealousy when his comrade received all the praise."},
+        {"term": "Revenge", "meaning": "复仇", "example": "He sought revenge for his father's death."}
+      ]
+    },
+    {
+      "category": "案件与推理",
+      "items": [
+        {"term": "Murder / Assassination", "meaning": "谋杀；刺杀", "example": "The murder of the king must be solved."},
+        {"term": "Crime scene", "meaning": "案发现场", "example": "The crime scene was in the guest room."},
+        {"term": "Evidence / Proof", "meaning": "证据", "example": "I need solid evidence to support my theory."},
+        {"term": "Clue", "meaning": "线索", "example": "This letter is a crucial clue."},
+        {"term": "Alibi", "meaning": "不在场证明", "example": "What was your alibi between 11 pm and 1 am?"},
+        {"term": "Motive", "meaning": "动机", "example": "What was his motive for killing the king?"}
+      ]
+    },
+    {
+      "category": "行动与状态",
+      "items": [
+        {"term": "Conspire", "meaning": "密谋；共谋", "example": "Did you conspire with others to kill the king?"},
+        {"term": "Frame someone", "meaning": "陷害某人", "example": "Someone is trying to frame me for this crime!"},
+        {"term": "Testify", "meaning": "作证", "example": "I can testify that I saw him in the corridor."},
+        {"term": "Suspect (v.)", "meaning": "怀疑", "example": "I suspect that he is not telling the truth."}
+      ]
+    }
+  ],
+  "sentence_patterns": [
+    {
+      "category": "提出指控与怀疑",
+      "items": [
+        {"pattern": "I suspect that...", "meaning": "我怀疑……"},
+        {"pattern": "The evidence suggests that...", "meaning": "证据表明……"},
+        {"pattern": "It is possible that you...", "meaning": "你有可能……"},
+        {"pattern": "Are you accusing me of...?", "meaning": "你是在指控我……吗？"}
+      ]
+    },
+    {
+      "category": "为自己辩护",
+      "items": [
+        {"pattern": "I have a solid alibi.", "meaning": "我有确凿的不在场证明。"},
+        {"pattern": "I had no motive to do it.", "meaning": "我没有这么做的动机。"},
+        {"pattern": "You have no proof against me.", "meaning": "你没有任何对我不利的证据。"},
+        {"pattern": "I swear I am innocent.", "meaning": "我发誓我是清白的。"}
+      ]
+    },
+    {
+      "category": "询问与探查",
+      "items": [
+        {"pattern": "What were you doing at...?", "meaning": "你在……时做什么？"},
+        {"pattern": "Can you explain this?", "meaning": "你能解释一下这个吗？"},
+        {"pattern": "What's your relationship with...?", "meaning": "你和……是什么关系？"},
+        {"pattern": "Where is your evidence?", "meaning": "你的证据在哪里？"}
+      ]
+    },
+    {
+      "category": "陈述与推理",
+      "items": [
+        {"pattern": "According to the clue...", "meaning": "根据这条线索……"},
+        {"pattern": "This doesn't make sense because...", "meaning": "这说不通，因为……"},
+        {"pattern": "My theory is that...", "meaning": "我的推论是……"},
+        {"pattern": "Let me connect the dots.", "meaning": "让我把这些线索串联起来。"}
+      ]
+    },
+    {
+      "category": "结盟与合作",
+      "items": [
+        {"pattern": "I think we share a common goal.", "meaning": "我想我们有共同的目标。"},
+        {"pattern": "Can we trust each other?", "meaning": "我们能信任彼此吗？"},
+        {"pattern": "Let's exchange information.", "meaning": "我们交换一下信息吧。"},
+        {"pattern": "I promise I will support you.", "meaning": "我保证会支持你。"}
+      ]
+    }
+  ]
+}

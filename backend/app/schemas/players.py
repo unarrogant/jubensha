@@ -8,6 +8,11 @@ class PlayerJoinResponse(BaseModel):
     is_host:bool
 
 class PlayerListItem(BaseModel):
+    # Stable identity is required by WebRTC and by the current-speaker panel.
+    # Without it FastAPI strips the id from the response, so every player
+    # appears disconnected and the UI cannot match a speaking stream to a
+    # character card.
+    id: str
     name:str
     character_name:str|None=None
     character_avatar:str|None=None
@@ -19,6 +24,28 @@ class VocabularyAnnotation(BaseModel):
     part_of_speech: str = ""
     meaning: str
     example: str = ""
+
+class ScaffoldVocabularyItem(BaseModel):
+    term: str
+    meaning: str
+    example: str = ""
+
+class ScaffoldVocabularyGroup(BaseModel):
+    category: str
+    items: list[ScaffoldVocabularyItem] = Field(default_factory=list)
+
+class ScaffoldSentenceItem(BaseModel):
+    pattern: str
+    meaning: str = ""
+
+class ScaffoldSentenceGroup(BaseModel):
+    category: str
+    items: list[ScaffoldSentenceItem] = Field(default_factory=list)
+
+class LanguageScaffold(BaseModel):
+    source_note: str = ""
+    vocabulary: list[ScaffoldVocabularyGroup] = Field(default_factory=list)
+    sentence_patterns: list[ScaffoldSentenceGroup] = Field(default_factory=list)
 
 class CharacterPrivate(BaseModel):
     id: str
@@ -37,4 +64,5 @@ class CharacterPrivate(BaseModel):
     relationships: list[dict] = Field(default_factory=list)
     timeline: list[dict] = Field(default_factory=list)
     vocabulary: list[VocabularyAnnotation] = Field(default_factory=list)
+    language_scaffold: LanguageScaffold = Field(default_factory=LanguageScaffold)
     

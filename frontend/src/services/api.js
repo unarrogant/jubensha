@@ -108,6 +108,38 @@ export function getAdminAgentAudit(roomId, token) {
   });
 }
 
+export function getAdminRoomSummary(roomId, token) {
+  return request(`/admin/rooms/${encodeURIComponent(roomId)}/summary`, {
+    headers: adminHeaders(token),
+  });
+}
+
+export function getAdminPlayerHistory(roomId, playerId, token) {
+  return request(
+    `/admin/rooms/${encodeURIComponent(roomId)}/players/${encodeURIComponent(playerId)}/history`,
+    { headers: adminHeaders(token) },
+  );
+}
+
+export function exportAdminRoom(roomId, token) {
+  return fetch(`${API_BASE_URL}/admin/rooms/${encodeURIComponent(roomId)}/export`, {
+    headers: adminHeaders(token),
+  }).then(async (response) => {
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.detail || `导出失败（${response.status}）`);
+    }
+    return response.blob();
+  });
+}
+
+export function deleteAdminRoom(roomId, token) {
+  return request(`/admin/rooms/${encodeURIComponent(roomId)}`, {
+    method: "DELETE",
+    headers: adminHeaders(token),
+  });
+}
+
 export const getPeerReviewStatus = (roomId, playerId) =>
   request(`/rooms/${encodeURIComponent(roomId)}/peer-review?${new URLSearchParams({ player_id: playerId })}`);
 

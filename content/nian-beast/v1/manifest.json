@@ -1,0 +1,18 @@
+{
+  "id": "nian-beast",
+  "version": 1,
+  "title": "The Story of Nian",
+  "type": "folklore_investigation",
+  "summary": "A mountain village mistakes its ancient guardian for a monster after a missing scale brings drought and fear.",
+  "author": "Uncredited",
+  "player_count": 6,
+  "estimated_minutes": 120,
+  "cover": "assets/background.png",
+  "status": "published",
+  "entry_stage": "waiting",
+  "language": "en",
+  "agent_profile": {"id":"nian_dm_v1","display_name":"The Lantern Keeper","avatar":"assets/host.jpg","graph_type":"folklore_investigation","system_prompt":"prompts/dm_system.md","language":"en","style":["warm folklore","mysterious","concise","evidence-led"]},
+  "data_files": {"characters":"characters.json","stages":"stages.json","locations":"locations.json","clues":"clues.json","unlock_rules":"unlock_rules.json","endings":"endings.json","vocabulary":"vocabulary.json"},
+  "vote_config": {"title":"Choose the village's final answer","instruction":"Choose the response that best protects the village and answers the messenger's demand. Each player may vote once.","options":[{"id":"restore_and_reveal","name":"Return the scale and reveal the truth","description":"Return the scale and publicly acknowledge Nian as the guardian."},{"id":"restore_and_hide","name":"Return the scale but hide the old secret","description":"Restore the scale while keeping the village's past concealed."},{"id":"merchant_keeps_scale","name":"Let the merchant keep the scale","description":"Protect the merchant's claim and refuse to return it."},{"id":"drive_away","name":"Drive the messenger away","description":"Reject dialogue and treat Nian as a monster."}]},
+  "tags": ["folklore","moral choice","investigation","English practice"]
+}

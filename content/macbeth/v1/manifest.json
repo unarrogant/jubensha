@@ -8,7 +8,7 @@
   "player_count": 5,
   "estimated_minutes": 90,
   "cover": "assets/background-1.jpg",
-  "status": "draft",
+  "status": "published",
   "entry_stage": "waiting",
   "language": "en",
   "agent_profile": {

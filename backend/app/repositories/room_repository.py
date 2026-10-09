@@ -31,6 +31,45 @@ class RoomRepository:
         self._mysql_store.save(room)
         return room
 
+    def record_event(
+        self,
+        room_id: str,
+        event_type: str,
+        *,
+        actor_player_id: str | None = None,
+        target_player_id: str | None = None,
+        payload: dict | None = None,
+        visibility: str = "admin",
+    ) -> dict | None:
+        """Append an immutable audit event to the room history.
+
+        The event history is intentionally stored in the room snapshot for now.
+        Redis keeps the hot copy and MySQL keeps the durable copy through the
+        existing hybrid repository, so admin exports survive process restarts.
+        """
+        room = self.get(room_id)
+        if room is None:
+            return None
+
+        history = room.setdefault("event_history", [])
+        event = {
+            "id": uuid4().hex,
+            "sequence": len(history) + 1,
+            "event_type": event_type,
+            "room_id": room_id,
+            "script_id": room.get("script_id"),
+            "script_version": room.get("script_version"),
+            "stage_id": room.get("game", {}).get("stage_id"),
+            "actor_player_id": actor_player_id,
+            "target_player_id": target_player_id,
+            "visibility": visibility,
+            "payload": payload or {},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        history.append(event)
+        self.save(room_id)
+        return event
+
 
     def create(
             self,
@@ -197,8 +236,96 @@ class RoomRepository:
             "remaining_players": remaining_players,
         }
 
-    def destroy(self, room_id: str) -> dict | None:
-        room = self._rooms.pop(room_id, None)
+    def remove_waiting_player(self, room_id: str, player_id: str) -> dict:
+        """Remove a disconnected player from a room that has not started.
+
+        Waiting-room membership is presence state, not game history. Once a
+        player leaves before the game starts, remove the player from the
+        snapshot so Redis/MySQL and the lobby immediately show a free seat.
+        The host owns the room; when the host leaves, the whole waiting room
+        is marked for destruction by the route layer.
+        """
+        room = self.get(room_id)
+        if room is None:
+            raise FileNotFoundError("房间不存在")
+        if room.get("status") != "waiting":
+            return {
+                "room_id": room_id,
+                "removed": False,
+                "destroyed": False,
+                "remaining_players": room.get("player_count", 0),
+                "player_id": player_id,
+            }
+
+        players = room.get("players", [])
+        player = next((item for item in players if item.get("id") == player_id), None)
+        if player is None:
+            return {
+                "room_id": room_id,
+                "removed": False,
+                "destroyed": False,
+                "remaining_players": room.get("player_count", 0),
+                "player_id": player_id,
+            }
+
+        if player.get("is_host"):
+            return {
+                "room_id": room_id,
+                "removed": True,
+                "destroyed": True,
+                "remaining_players": 0,
+                "player_id": player_id,
+            }
+
+        room["players"] = [item for item in players if item.get("id") != player_id]
+        room["player_count"] = len(room["players"])
+        self.save(room_id)
+        return {
+            "room_id": room_id,
+            "removed": True,
+            "destroyed": False,
+            "remaining_players": room["player_count"],
+            "player_id": player_id,
+        }
+
+    def destroy(
+        self,
+        room_id: str,
+        *,
+        archive: bool = False,
+        reason: str = "room_destroyed",
+    ) -> dict | None:
+        room = self.get(room_id)
+        if room is not None and archive:
+            room["status"] = "ended"
+            room["ended_at"] = datetime.now(timezone.utc).isoformat()
+            room["end_reason"] = reason
+            room.setdefault("event_history", []).append({
+                "id": uuid4().hex,
+                "sequence": len(room["event_history"]) + 1,
+                "event_type": "ROOM_AUTO_ENDED",
+                "room_id": room_id,
+                "script_id": room.get("script_id"),
+                "script_version": room.get("script_version"),
+                "stage_id": room.get("game", {}).get("stage_id"),
+                "actor_player_id": None,
+                "target_player_id": None,
+                "visibility": "admin",
+                "payload": {"reason": reason},
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+            self._mysql_store.archive(room, reason)
+
+        self._rooms.pop(room_id, None)
         self._redis_store.delete(room_id)
         self._mysql_store.delete(room_id)
         return room
+
+    def get_archived(self, room_id: str) -> dict | None:
+        return self._mysql_store.get_archive(room_id)
+
+    def list_archived(self) -> list[dict]:
+        return self._mysql_store.list_archives()
+
+    def delete_archived(self, room_id: str) -> None:
+        self._mysql_store.delete_archive(room_id)

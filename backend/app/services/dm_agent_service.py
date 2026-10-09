@@ -275,6 +275,43 @@ class DMAgentService:
                 "tool_data": validated.tool_data,
             })
             self.room_repository.save(room_id)
+            self.room_repository.record_event(
+                room_id,
+                "DM_RESPONSE",
+                actor_player_id=player_id,
+                payload={
+                    "question": content,
+                    "answer": validated.content,
+                    "visibility": validated.visibility,
+                    "clue_ids": validated.clue_ids,
+                    "tool_used": validated.tool_used,
+                    "tool_name": validated.tool_name,
+                    "tool_status": validated.tool_status,
+                    "tool_data": validated.tool_data,
+                },
+            )
+            if validated.tool_used:
+                self.room_repository.record_event(
+                    room_id,
+                    "TOOL_CALLED",
+                    actor_player_id=player_id,
+                    payload={
+                        "tool_name": validated.tool_name,
+                        "tool_status": validated.tool_status,
+                        "tool_data": validated.tool_data,
+                    },
+                )
+            for clue_id in validated.clue_ids:
+                self.room_repository.record_event(
+                    room_id,
+                    "CLUE_RELEASED",
+                    actor_player_id=player_id,
+                    target_player_id=player_id,
+                    payload={
+                        "clue_id": clue_id,
+                        "source": validated.tool_name or "agent_response",
+                    },
+                )
         return validated
 
     def build_public_context(
