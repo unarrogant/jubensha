@@ -271,13 +271,16 @@ export class WebRTCVoiceClient {
       const volume = Math.sqrt(energy / samples.length);
       const now = performance.now();
 
-      if (volume >= 0.035) {
+      // Remote streams are often quieter after browser echo cancellation and
+      // network audio processing. Keep the trigger low, while the release
+      // delay below prevents the speaking badge from flickering on pauses.
+      if (volume >= 0.02) {
         monitor.loudFrames += 1;
         monitor.lastLoudAt = now;
-        if (monitor.loudFrames >= 2) this.setMonitorSpeaking(playerId, true);
+        if (monitor.loudFrames >= 1) this.setMonitorSpeaking(playerId, true);
       } else {
         monitor.loudFrames = 0;
-        if (monitor.speaking && now - monitor.lastLoudAt > 420) {
+        if (monitor.speaking && now - monitor.lastLoudAt > 520) {
           this.setMonitorSpeaking(playerId, false);
         }
       }
