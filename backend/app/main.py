@@ -3,10 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from app.api.router import api_router
-from app.services.script_loader import CONTENT_ROOT
+from app.infrastructure.scripts.loader import CONTENT_ROOT
 
 app=FastAPI(
-    title="剧本杀管理系统",
+    title="幕间戏语",
     version="0.1.0"
 )
 
@@ -16,6 +16,10 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
+    # Vite moves to the next port when 5173 is occupied (for example 5174).
+    # Keep local development same-origin through the proxy without rejecting
+    # the browser's CORS preflight on that alternate port.
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

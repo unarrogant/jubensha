@@ -1,16 +1,19 @@
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
+  // Use the dev-server/Nginx proxy by default so browser requests stay same-origin.
+  // Set VITE_API_BASE_URL only when the API is hosted on a separate origin.
+  import.meta.env.VITE_API_BASE_URL || "/api";
 
 export const CONTENT_BASE_URL =
-  import.meta.env.VITE_CONTENT_BASE_URL || "http://127.0.0.1:8000/content";
+  import.meta.env.VITE_CONTENT_BASE_URL || "/content";
 
 async function request(path, options = {}) {
+  const headers = {
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
+    ...(options.headers || {}),
+  };
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    headers,
   });
   const data = await response.json().catch(() => null);
   if (!response.ok) {
@@ -86,6 +89,29 @@ export const getGameState = (roomId) =>
   request(`/rooms/${encodeURIComponent(roomId)}/state`);
 export const getMyClues = (roomId, playerId) =>
   request(`/rooms/${encodeURIComponent(roomId)}/players/${encodeURIComponent(playerId)}/clues`);
+
+export const getInvestigationLocations = (roomId, playerId) =>
+  request(
+    `/rooms/${encodeURIComponent(roomId)}/investigation/locations?${new URLSearchParams({ player_id: playerId })}`,
+  );
+
+export function enterInvestigationLocation(roomId, playerId, locationId) {
+  return request(`/rooms/${encodeURIComponent(roomId)}/investigation/enter`, {
+    method: "POST",
+    body: JSON.stringify({ player_id: playerId, location_id: locationId }),
+  });
+}
+
+export function inspectInvestigationObject(roomId, playerId, locationId, objectText) {
+  return request(`/rooms/${encodeURIComponent(roomId)}/investigation/inspect`, {
+    method: "POST",
+    body: JSON.stringify({
+      player_id: playerId,
+      location_id: locationId,
+      object_text: objectText,
+    }),
+  });
+}
 export const getMessages = (roomId, playerId) =>
   request(`/rooms/${encodeURIComponent(roomId)}/messages?${new URLSearchParams({ player_id: playerId })}`);
 
