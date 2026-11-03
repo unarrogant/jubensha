@@ -23,6 +23,7 @@ class DMState(TypedDict, total=False):
     room_id: str
     player_id: str
     thread_id: str
+    request_id: str
     player_message: str
     context: dict[str, Any]
     visibility: Visibility

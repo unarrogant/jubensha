@@ -1,16 +1,15 @@
 import random
 
-from app.repositories.room_repository import RoomRepository
-from app.services.script_bundle import ScriptBundleLoader
+from app.interfaces.ports import RoomRepositoryPort, ScriptBundlePort
 
 class RoleService:
     def __init__(
             self,
-            room_repository:RoomRepository,
-            bundle_loader:ScriptBundleLoader|None=None,
+            room_repository:RoomRepositoryPort,
+            bundle_loader:ScriptBundlePort,
     ):
         self.room_repository=room_repository
-        self.bundle_loader=bundle_loader or ScriptBundleLoader()
+        self.bundle_loader=bundle_loader
 
     def assign_roles(self,room_id:str)->list[dict]:
         room=self.room_repository.get(room_id)

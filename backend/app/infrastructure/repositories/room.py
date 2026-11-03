@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.services.script_loader import ScriptLoader
+from app.infrastructure.scripts.loader import ScriptLoader
 from app.config import get_storage_config
-from app.persistence.mysql_store import MysqlRoomStore
-from app.persistence.redis_store import RedisRoomStore
+from app.interfaces.ports import RoomRepositoryPort
+from app.infrastructure.storage.mysql import MysqlRoomStore
+from app.infrastructure.storage.redis import RedisRoomStore
 
-class RoomRepository:
+class RoomRepository(RoomRepositoryPort):
     def __init__(self):
         self._rooms = {}
         self._script_loader = ScriptLoader()

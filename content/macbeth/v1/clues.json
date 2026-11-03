@@ -2,7 +2,9 @@
   {
     "id": "clue_01",
     "title": "The Witches' Prophecy",
+    "title_zh": "女巫的预言",
     "content": "The three witches foretold: 'All hail, Macbeth, that shalt be king hereafter!' 'Thou shalt get kings, though thou be none.' 'None of woman born shall harm Macbeth.'",
+    "content_zh": "三个女巫曾预言：「万福，麦克白，你日后将为王。」「你虽不为王，你的子孙却将为王。」「凡女人所生者，皆不能伤害麦克白。」",
     "asset": "assets/clues/clue_01.jpg",
     "visibility": "public",
     "target": "all",
@@ -15,7 +17,9 @@
   {
     "id": "clue_02",
     "title": "Macbeth's Letter to His Wife",
+    "title_zh": "致夫人的信",
     "content": "'I have encountered something strange. They foretold that I would become king. You have often said that I am too full of the milk of human kindness and lack resolve. Now fate lays a gift before me, yet I am afraid.'",
+    "content_zh": "「我遇见了一件怪异的事。她们预言我将成为国王。你常说我的仁慈太多、决断太少。如今命运把礼物放到我面前，我却害怕。」",
     "asset": "assets/clues/clue_02.jpg",
     "visibility": "public",
     "target": "all",
@@ -28,7 +32,9 @@
   {
     "id": "clue_03",
     "title": "Malcolm's Diary",
+    "title_zh": "马尔康的日记",
     "content": "Malcolm wrote: 'Father has rejected my proposal yet again. He sees only my recklessness and refuses to see the ambition in Macbeth's eyes. This country needs a sword, not a king who forever hides behind a shield.' A servant also heard him pacing angrily in his room.",
+    "content_zh": "马尔康写道：「父亲又一次驳回我的提议。他只看见我的鲁莽，却看不见麦克白眼中的野心。这个国家需要的是一把剑，不是一个永远躲在盾牌后面的国王。」一名仆人也听见他在房里愤怒地踱步。",
     "asset": "assets/clues/clue_03.jpg",
     "visibility": "public",
     "target": "all",
@@ -41,7 +47,9 @@
   {
     "id": "clue_04",
     "title": "Banquo's Testimony",
+    "title_zh": "班柯的证词",
     "content": "Banquo's diary reads: 'Today Macbeth was made Thane of Cawdor, though the victory belonged to us both. Those strange sisters trouble me; the instruments of darkness often tell us truths in small matters only to betray us later.' An unsent note adds: 'I, Banquo, beg a private meeting in the eastern chamber at midnight on a matter concerning the safety of the realm.'",
+    "content_zh": "班柯的日记写着：「今日麦克白受封科多尔勋爵，可那份战功本属于我们两个人。那三个奇异的女子让我不安——黑暗的器具常常先在小事上说真话，只为日后背叛我们。」另有一封未寄出的字条：「我，班柯，恳请于午夜在东厢私下会面，事关王国安危。」",
     "asset": "assets/clues/clue_04.jpg",
     "visibility": "public",
     "target": "all",
@@ -54,7 +62,9 @@
   {
     "id": "clue_05",
     "title": "The Bloodstained Gown",
+    "title_zh": "带血的女式长袍",
     "content": "A lady's formal gown was found in Macbeth's chamber. Dark red stains remain around the cuffs despite repeated washing.",
+    "content_zh": "在麦克白的房间里发现一件女式礼服长袍。袖口反复洗过，仍留着暗红色的痕迹。",
     "asset": "assets/clues/clue_05.jpg",
     "visibility": "public",
     "target": "all",
@@ -67,7 +77,9 @@
   {
     "id": "clue_06",
     "title": "The Cellar Keeper's Testimony",
+    "title_zh": "地窖看守的证词",
     "content": "The cellar keeper saw Macbeth pacing alone in the eastern gallery near midnight, too disturbed to answer a greeting. On Lady Macbeth's order, the keeper also released a bottle of potent poppy extract, supposedly for sleep, to a visibly anxious servant.",
+    "content_zh": "地窖看守看见麦克白在午夜前后独自沿着东廊踱步，心神不宁，连招呼都顾不上回应。看守还按麦克白夫人的吩咐，把一瓶效力很强的鸦片酊——说是助眠之用——交给了一位神色紧张的仆人。",
     "asset": "assets/clues/clue_06.jpg",
     "visibility": "public",
     "target": "all",
@@ -80,7 +92,9 @@
   {
     "id": "clue_08",
     "title": "Macduff's Secret",
+    "title_zh": "麦克德夫的秘密",
     "content": "Testimony from one of Macduff's retainers reveals that Macduff was not delivered by natural birth, but was taken from his mother's womb by Caesarean section.",
+    "content_zh": "麦克德夫的一名随从供称：他不是自然降生，而是从母亲腹中以剖腹之术取出。",
     "asset": "assets/clues/clue_08.jpg",
     "visibility": "public",
     "target": "all",
@@ -93,7 +107,9 @@
   {
     "id": "clue_09",
     "title": "The Broken Pact",
+    "title_zh": "残缺的密约",
     "content": "Macduff holds the right half of a secret letter: 'I see his ambition spread like wildfire while His Majesty remains blind. Though my family bears disgrace, Scotland stands above private grievance. If Your Highness will act for the realm's future, I pledge my service. Burn this after reading. —M.' Malcolm holds the left half, which warns of danger beneath the glory of the Thane of Cawdor.",
+    "content_zh": "麦克德夫握着密信的后半页：「我看见他的野心如野火蔓延，而陛下依旧失明。纵然我的家族蒙受耻辱，苏格兰仍高于私怨。若殿下愿为王国的将来出手，我愿效命。读后即焚。——M。」马尔康握着前半页，警示科多尔勋爵的荣光之下藏着危险。",
     "asset": "assets/clues/clue_09.jpg",
     "visibility": "public",
     "target": "all",
@@ -106,7 +122,9 @@
   {
     "id": "clue_10",
     "title": "The Guard's Ring",
+    "title_zh": "亲卫的银戒",
     "content": "A silver ring was hidden in the ashes of the crime-scene fireplace. Malcolm's personal guard's crest is engraved inside it. The ring was found in the eastern guest chamber where Duncan died.",
+    "content_zh": "案发现场的壁炉灰烬里藏着一枚银戒，内侧刻着马尔康亲卫的族徽。它出现在邓肯遇刺的那间东厢客房。",
     "asset": "assets/clues/clue_10.jpg",
     "visibility": "public",
     "target": "all",
@@ -119,7 +137,9 @@
   {
     "id": "clue_11",
     "title": "A Servant's Testimony",
+    "title_zh": "仆人的证词",
     "content": "A servant reports: 'Around midnight, Lord Banquo stopped me and asked endless questions about the castle watch. We spoke for nearly a quarter of an hour. It was strange; nobles never concern themselves with such details.'",
+    "content_zh": "一名仆人禀报：「午夜前后，班柯大人叫住我，问了许久的城堡守夜安排，我们说了近一刻钟。这很奇怪——贵族从不会在意这样的细节。」",
     "asset": "assets/clues/clue_11.jpg",
     "visibility": "public",
     "target": "all",
@@ -132,7 +152,9 @@
   {
     "id": "clue_12",
     "title": "Duncan's Secret Order",
+    "title_zh": "邓肯的密令",
     "content": "King Duncan wrote: 'Macbeth has served with distinction, yet ambition burns in his eyes. The witches' words may not be empty. Upon returning to court tomorrow, I shall begin stripping Macbeth of military command. Keep this matter secret.'",
+    "content_zh": "国王邓肯写道：「麦克白战功卓著，可他眼中有野心在烧。女巫的话未必是空。明日回朝之后，我要开始收回他的兵权。此事保密。」",
     "asset": "assets/clues/clue_12.jpg",
     "visibility": "public",
     "target": "all",

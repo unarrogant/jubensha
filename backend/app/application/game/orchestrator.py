@@ -2,11 +2,15 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from app.repositories.room_repository import RoomRepository
-from app.services.dm_agent_service import DMAgentService
-from app.services.dm_service import DMService
-from app.services.game_service import GameService
-from app.services.script_bundle import ScriptBundleLoader
+from app.application.agent.service import DMAgentService
+from app.application.messaging.dm import DMService
+from app.application.game.service import GameService
+from app.interfaces.ports import (
+    EventPublisherPort,
+    RoomExecutionLockPort,
+    RoomRepositoryPort,
+    ScriptBundlePort,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -15,12 +19,13 @@ logger = logging.getLogger(__name__)
 class GameOrchestratorService:
     def __init__(
         self,
-        room_repository: RoomRepository,
-        bundle_loader: ScriptBundleLoader,
+        room_repository: RoomRepositoryPort,
+        bundle_loader: ScriptBundlePort,
         game_service: GameService,
         dm_agent_service: DMAgentService,
         dm_service: DMService,
-        connection_manager,
+        connection_manager: EventPublisherPort,
+        execution_lock: RoomExecutionLockPort,
     ):
         self.room_repository = room_repository
         self.bundle_loader = bundle_loader
@@ -28,6 +33,7 @@ class GameOrchestratorService:
         self.dm_agent_service = dm_agent_service
         self.dm_service = dm_service
         self.connection_manager = connection_manager
+        self.execution_lock = execution_lock
         self.tasks: dict[str, asyncio.Task] = {}
         self.announcement_tasks: set[asyncio.Task] = set()
         self.announcement_locks: dict[str, asyncio.Lock] = {}
@@ -275,8 +281,32 @@ class GameOrchestratorService:
                 )
                 await asyncio.sleep(wait_seconds)
 
-                previous_stage_id = game.get("stage_id")
-                next_game = self.game_service.refresh_stage(room_id)
+                lock_token = await asyncio.to_thread(
+                    self.execution_lock.acquire,
+                    room_id,
+                    "stage-advance",
+                    60,
+                )
+                if lock_token is None:
+                    await asyncio.sleep(1)
+                    continue
+
+                try:
+                    current_room = self.room_repository.get(room_id)
+                    if (
+                        current_room is None
+                        or current_room.get("status") != "playing"
+                    ):
+                        return
+                    previous_stage_id = current_room.get("game", {}).get("stage_id")
+                    next_game = self.game_service.refresh_stage(room_id)
+                finally:
+                    await asyncio.to_thread(
+                        self.execution_lock.release,
+                        room_id,
+                        "stage-advance",
+                        lock_token,
+                    )
 
                 if next_game.get("stage_id") == previous_stage_id:
                     continue

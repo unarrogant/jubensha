@@ -3,7 +3,10 @@ import re
 from pathlib import Path
 
 
-PROJECT_ROOT=Path(__file__).resolve().parents[3]
+# loader.py 位于 <project>/backend/app/infrastructure/scripts。
+# parents[4] 才是同时包含 backend、content 和 public 的项目根目录；
+# parents[3] 只会得到 backend，导致本地与容器都错误查找 backend/content。
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
 CONTENT_ROOT=PROJECT_ROOT/"content"
 
 

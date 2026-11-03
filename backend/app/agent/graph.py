@@ -164,6 +164,15 @@ def build_dm_graph(checkpointer=None, tools=None):
         """Ask the model for a direct response or a registered tool call."""
         context = state.get("context", {})
         system_prompt = context.get("DM_SYSTEM", "")
+        static_context = context.get("STATIC_CONTEXT")
+        if static_context:
+            # Static script content is stable across the session, so it lives
+            # in the system prompt prefix instead of the per-turn payload.
+            system_prompt = (
+                f"{system_prompt}\n\n"
+                "\u4ee5\u4e0b\u662f\u672c\u5c40\u5267\u672c\u7684\u56fa\u5b9a\u4fe1\u606f\uff0c\u6574\u5c40\u4e0d\u4f1a\u53d8\u5316\uff1a\n"
+                f"{json.dumps(static_context, ensure_ascii=False, sort_keys=True, default=str)}"
+            )
         is_public_event = state.get("request_type") == "public_event"
         language_rule = (
             "\n所有面向玩家的主持人回复必须使用自然、流畅的中文。"
@@ -217,7 +226,7 @@ def build_dm_graph(checkpointer=None, tools=None):
         model_context = {
             key: value
             for key, value in context.items()
-            if key != "DM_SYSTEM"
+            if key not in {"DM_SYSTEM", "STATIC_CONTEXT"}
         }
 
         request_content = json.dumps(

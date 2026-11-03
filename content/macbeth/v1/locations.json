@@ -17,72 +17,87 @@
     {
       "id": "crime_scene",
       "name": "Crime Scene",
+      "name_zh": "案发现场",
       "public_summary": "The eastern guest chamber where King Duncan died. Blood and disturbed furnishings still bear the marks of last night.",
+      "public_summary_zh": "国王邓肯遇刺的东厢客房。血迹与凌乱的陈设还留着昨夜的痕迹。",
       "entry_narration": "A dark trail of blood crosses the carpet toward the door. The fireplace ashes are still warm, and a metallic glint catches at their edge. A cup lies overturned beside the table, while a long cut splits the curtain.",
+      "entry_narration_zh": "血迹从地毯一直拖到门口。壁炉里的灰烬还温热，边缘闪着一点金属的光。桌旁倒着一只杯子，帷幔被划开了一道长长的口子。",
       "searchable_objects": [
-        {"id": "fireplace_ashes", "name": "fireplace ashes", "aliases": ["fireplace", "ashes", "warm ashes", "edge of the fireplace"], "result": {"type": "clue", "clue_id": "clue_10", "message": "You brush aside the warm ashes. A silver ring lies beneath them, engraved inside with the crest of Malcolm's personal guard."}},
-        {"id": "blood_stain", "name": "bloodstained carpet", "aliases": ["blood", "bloodstain", "carpet", "drag mark"], "result": {"type": "empty", "message": "The marks appear to come from the struggle. You find nothing more."}},
-        {"id": "wine_glass", "name": "overturned cup", "aliases": ["cup", "wine cup", "glass", "wine"], "result": {"type": "empty", "message": "Only ordinary medicinal wine remains in the cup, likely Duncan's drink before sleep."}},
-        {"id": "curtain", "name": "torn curtain", "aliases": ["curtain", "cut", "window", "torn fabric"], "result": {"type": "empty", "message": "The damage seems to have been left by the struggle. You find nothing more."}}
+        {"id": "fireplace_ashes", "name": "fireplace ashes", "name_zh": "壁炉灰烬", "aliases": ["fireplace", "ashes", "warm ashes", "edge of the fireplace"], "result": {"type": "clue", "clue_id": "clue_10", "message": "You brush aside the warm ashes. A silver ring lies beneath them, engraved inside with the crest of Malcolm's personal guard.", "message_zh": "拨开还温热的灰烬，底下压着一枚银戒，内侧刻着马尔康亲卫的族徽。"}},
+        {"id": "blood_stain", "name": "bloodstained carpet", "name_zh": "血迹地毯", "aliases": ["blood", "bloodstain", "carpet", "drag mark"], "result": {"type": "empty", "message": "The marks appear to come from the struggle. You find nothing more.", "message_zh": "痕迹只来自搏斗本身，再摸不出别的东西。"}},
+        {"id": "wine_glass", "name": "overturned cup", "name_zh": "倾倒酒杯", "aliases": ["cup", "wine cup", "glass", "wine"], "result": {"type": "empty", "message": "Only ordinary medicinal wine remains in the cup, likely Duncan's drink before sleep.", "message_zh": "杯里只剩寻常的药酒，像是邓肯睡前喝的那一杯。"}},
+        {"id": "curtain", "name": "torn curtain", "name_zh": "撕裂帷幔", "aliases": ["curtain", "cut", "window", "torn fabric"], "result": {"type": "empty", "message": "The damage seems to have been left by the struggle. You find nothing more.", "message_zh": "裂口是搏斗时留下的，布褶里没有夹带任何东西。"}}
       ]
     },
     {
       "id": "macbeth_room",
       "name": "Macbeth's Room",
+      "name_zh": "麦克白房间",
       "public_summary": "Macbeth's private chamber, where a desk, a suit of armor, and a locked iron chest stand in uneasy silence.",
+      "public_summary_zh": "麦克白的内室。书桌、一副铠甲与一只上锁的铁箱各自沉默，气氛不安。",
       "entry_narration": "The Chronicles of Scotland lies open on the desk, its spine worn from use. Faint letters are carved inside the armor in the corner. A new lock secures the iron chest beneath the bed, and an unfinished family letter rests beneath an ink bottle.",
+      "entry_narration_zh": "书桌上摊着《苏格兰编年史》，书脊已被翻得起毛。角落的铠甲内侧隐约有刻字。床下的铁箱换了新锁，一瓶墨水下压着一封没写完的家书。",
       "searchable_objects": [
-        {"id": "chronicle", "name": "Chronicles of Scotland", "aliases": ["chronicle", "chronicles", "book", "pages", "desk book"], "result": {"type": "clue", "clue_id": "clue_02", "message": "A folded sheet is hidden between the pages: Macbeth's private letter to his wife."}},
-        {"id": "armor", "name": "armor in the corner", "aliases": ["armor", "suit of armor", "corner"], "result": {"type": "empty", "message": "The inscription is a common military mark recording the date of an old battle."}},
-        {"id": "iron_chest", "name": "iron chest beneath the bed", "aliases": ["iron chest", "chest", "lock", "under the bed"], "result": {"type": "empty", "message": "The chest contains military pay in silver. Nothing appears unusual."}},
-        {"id": "unfinished_letter", "name": "unfinished family letter", "aliases": ["letter", "unfinished letter", "ink bottle", "family letter"], "result": {"type": "empty", "message": "It is an ordinary household letter asking that the evening feast be prepared."}}
+        {"id": "chronicle", "name": "Chronicles of Scotland", "name_zh": "苏格兰编年史", "aliases": ["chronicle", "chronicles", "book", "pages", "desk book"], "result": {"type": "clue", "clue_id": "clue_02", "message": "A folded sheet is hidden between the pages: Macbeth's private letter to his wife.", "message_zh": "书页之间夹着一张折起的纸，是麦克白写给夫人的私信。"}},
+        {"id": "armor", "name": "armor in the corner", "name_zh": "角落铠甲", "aliases": ["armor", "suit of armor", "corner"], "result": {"type": "empty", "message": "The inscription is a common military mark recording the date of an old battle.", "message_zh": "内侧刻的是一行寻常军记，只记着某场旧战的日期。"}},
+        {"id": "iron_chest", "name": "iron chest beneath the bed", "name_zh": "床下铁箱", "aliases": ["iron chest", "chest", "lock", "under the bed"], "result": {"type": "empty", "message": "The chest contains military pay in silver. Nothing appears unusual.", "message_zh": "箱中是银币军饷，锁是新换的，里头看不出异常。"}},
+        {"id": "unfinished_letter", "name": "unfinished family letter", "name_zh": "未写完的家书", "aliases": ["letter", "unfinished letter", "ink bottle", "family letter"], "result": {"type": "empty", "message": "It is an ordinary household letter asking that the evening feast be prepared.", "message_zh": "只是一封普通家书，叮嘱今晚把宴席备好。"}}
       ]
     },
     {
       "id": "malcolm_room",
       "name": "Malcolm's Room",
+      "name_zh": "马尔康房间",
       "public_summary": "The prince's temporary chamber. Maps of England and scattered papers give it the air of a war room.",
+      "public_summary_zh": "王子的临时居所。英格兰地图与散落的文件让它看起来像一间作战室。",
       "entry_narration": "A dark green cloak lies neatly folded in a chest, though its lining feels unusually stiff. A crumpled parchment in the wastebasket bears the word 'Birnam.' A broken wax seal rests in the bedside drawer, and the map of England is creased from repeated use.",
+      "entry_narration_zh": "一只墨绿斗篷整齐叠在箱中，内衬却硬得反常。纸篓里揉皱的羊皮纸上写着勃南两个字。床侧抽屉里是一枚破碎的蜡封，英格兰地图的折痕被反复摩过。",
       "searchable_objects": [
-        {"id": "cloak_lining", "name": "lining of the green cloak", "aliases": ["cloak", "green cloak", "lining", "clothes chest"], "result": {"type": "clue", "clue_id": "clue_03", "message": "Inside the cloak's lining, you find a cloth-wrapped diary bearing Malcolm's name."}},
-        {"id": "wastepaper", "name": "wastebasket", "aliases": ["wastebasket", "waste paper", "parchment", "Birnam"], "result": {"type": "empty", "message": "It is only a rejected withdrawal plan, written in anger."}},
-        {"id": "broken_seal", "name": "broken wax seal", "aliases": ["wax seal", "broken seal", "drawer", "bedside drawer"], "result": {"type": "empty", "message": "The fragments are too damaged to reveal their origin."}},
-        {"id": "england_map", "name": "map of England", "aliases": ["map", "England", "wall map"], "result": {"type": "empty", "message": "It is a conventional campaign map marking the passes toward England."}}
+        {"id": "cloak_lining", "name": "lining of the green cloak", "name_zh": "墨绿斗篷内衬", "aliases": ["cloak", "green cloak", "lining", "clothes chest"], "result": {"type": "clue", "clue_id": "clue_03", "message": "Inside the cloak's lining, you find a cloth-wrapped diary bearing Malcolm's name.", "message_zh": "内衬硬着一块，摸出一本布包日记，封皮写着马尔康的名字。"}},
+        {"id": "wastepaper", "name": "wastebasket", "name_zh": "纸篓", "aliases": ["wastebasket", "waste paper", "parchment", "Birnam"], "result": {"type": "empty", "message": "It is only a rejected withdrawal plan, written in anger.", "message_zh": "只是愤怒之下写废的撤军方案，勃南两个字被划掉又重写。"}},
+        {"id": "broken_seal", "name": "broken wax seal", "name_zh": "破碎蜡封", "aliases": ["wax seal", "broken seal", "drawer", "bedside drawer"], "result": {"type": "empty", "message": "The fragments are too damaged to reveal their origin.", "message_zh": "碎片毁得太厉害，已经认不出出自哪一枚印。"}},
+        {"id": "england_map", "name": "map of England", "name_zh": "英格兰地图", "aliases": ["map", "England", "wall map"], "result": {"type": "empty", "message": "It is a conventional campaign map marking the passes toward England.", "message_zh": "一张寻常行军图，折痕集中在通往英格兰的几处关隘。"}}
       ]
     },
     {
       "id": "banquo_room",
       "name": "Banquo's Room",
+      "name_zh": "班柯房间",
       "public_summary": "Banquo's chamber appears plain and orderly, though several details suggest that someone tried to hide a search.",
+      "public_summary_zh": "班柯的房间看似朴素整齐，但几处细节说明有人试图掩盖翻找过的痕迹。",
       "entry_narration": "The room smells of lamp oil. One stone beside the bed stands slightly higher than the others, and no dust fills its edges. A metal box on the desk has a broken lock, scratches mark the edge of the wall map, and the lining of an old cloak has been opened and resewn.",
+      "entry_narration_zh": "房间里有灯油的气味。床畔一块石砖比旁边的略高，缝里没有积灰。桌上的铁盒锁被撬开，墙上地图的边缘有划痕，一件旧斗篷的内衬被拆开又缝了回去。",
       "searchable_objects": [
-        {"id": "loose_floor_brick", "name": "raised stone by the bed", "aliases": ["stone", "brick", "raised stone", "loose brick", "bedside stone"], "result": {"type": "clue", "clue_id": "clue_04", "message": "A small metal box lies in the hollow beneath the stone. It holds Banquo's diary and an unsent secret letter."}},
-        {"id": "broken_lockbox", "name": "broken metal box", "aliases": ["metal box", "lockbox", "broken lock", "desk box"], "result": {"type": "empty", "message": "Someone has already searched it. Only a few copper coins remain."}},
-        {"id": "wall_map", "name": "wall map", "aliases": ["map", "wall map", "scratches"], "result": {"type": "empty", "message": "The markings correspond to defensive positions around the castle and appear to be military study."}},
-        {"id": "old_cloak", "name": "old cloak", "aliases": ["cloak", "old cloak", "wardrobe", "lining"], "result": {"type": "empty", "message": "It is only a poorly repaired garment, likely the work of an inexperienced servant."}}
+        {"id": "loose_floor_brick", "name": "raised stone by the bed", "name_zh": "床畔隆起石砖", "aliases": ["stone", "brick", "raised stone", "loose brick", "bedside stone"], "result": {"type": "clue", "clue_id": "clue_04", "message": "A small metal box lies in the hollow beneath the stone. It holds Banquo's diary and an unsent secret letter.", "message_zh": "石砖下是空腔，藏着一只小铁盒：班柯的日记和一封未寄出的密信。"}},
+        {"id": "broken_lockbox", "name": "broken metal box", "name_zh": "损坏铁盒", "aliases": ["metal box", "lockbox", "broken lock", "desk box"], "result": {"type": "empty", "message": "Someone has already searched it. Only a few copper coins remain.", "message_zh": "锁已经被撬开过，只剩几枚铜币。"}},
+        {"id": "wall_map", "name": "wall map", "name_zh": "墙上地图", "aliases": ["map", "wall map", "scratches"], "result": {"type": "empty", "message": "The markings correspond to defensive positions around the castle and appear to be military study.", "message_zh": "标记对应城堡周边的布防，更像是军事上的研习。"}},
+        {"id": "old_cloak", "name": "old cloak", "name_zh": "旧斗篷", "aliases": ["cloak", "old cloak", "wardrobe", "lining"], "result": {"type": "empty", "message": "It is only a poorly repaired garment, likely the work of an inexperienced servant.", "message_zh": "缝补得很潦草的一件旧衣，出自不熟练的女仆之手。"}}
       ]
     },
     {
       "id": "macduff_room",
       "name": "Macduff's Room",
+      "name_zh": "麦克德夫房间",
       "public_summary": "The Thane of Fife's chamber is austere, but a burned letter and a heavy candlestick appear out of place.",
+      "public_summary_zh": "法伊夫勋爵的房间简朴克制，一封烧毁的信和一盏沉重的铜烛台却显得格格不入。",
       "entry_narration": "The bronze candlestick is unusually heavy, and turning marks ring its base. A burned letter on the desk preserves part of the word 'alliance.' One petal of the stone iris carved into the fireplace can be pressed, while a faded family record beneath the bed bears a scratched reference to a Caesarean birth.",
+      "entry_narration_zh": "铜烛台沉得不合常理，底座留着一圈拧动痕。桌上的信烧得只剩半角，隐约是联盟二字。壁炉石雕鸢尾的一片花瓣按得下去，床下褪色的族谱上有一行关于出生的刮痕批注。",
       "searchable_objects": [
-        {"id": "candlestick_base", "name": "base of the bronze candlestick", "aliases": ["candlestick", "bronze candlestick", "base", "turning marks"], "result": {"type": "clue", "clue_id": "clue_09", "message": "The base twists open to reveal a hollow compartment containing half of a parchment pact."}},
-        {"id": "burned_letter", "name": "burned letter", "aliases": ["letter", "burned letter", "charred paper", "alliance"], "result": {"type": "empty", "message": "The letter is too badly burned; only scattered words remain legible."}},
-        {"id": "iris_carving", "name": "stone iris carving", "aliases": ["iris", "stone carving", "petal", "fireplace carving"], "result": {"type": "empty", "message": "A mechanism clicks behind the wall, but it opens only an abandoned passage."}},
-        {"id": "family_tree", "name": "family record beneath the bed", "aliases": ["family record", "family tree", "under the bed", "Caesarean"], "result": {"type": "empty", "message": "It appears to be an ordinary genealogy. The note about birth may be no more than an old annotation."}}
+        {"id": "candlestick_base", "name": "base of the bronze candlestick", "name_zh": "铜烛台底座", "aliases": ["candlestick", "bronze candlestick", "base", "turning marks"], "result": {"type": "clue", "clue_id": "clue_09", "message": "The base twists open to reveal a hollow compartment containing half of a parchment pact.", "message_zh": "底座能拧开，夹层里是密约羊皮纸的半页。"}},
+        {"id": "burned_letter", "name": "burned letter", "name_zh": "烧毁的信", "aliases": ["letter", "burned letter", "charred paper", "alliance"], "result": {"type": "empty", "message": "The letter is too badly burned; only scattered words remain legible.", "message_zh": "烧得太彻底，只余零散词形，隐约认得出联盟二字。"}},
+        {"id": "iris_carving", "name": "stone iris carving", "name_zh": "石雕鸢尾", "aliases": ["iris", "stone carving", "petal", "fireplace carving"], "result": {"type": "empty", "message": "A mechanism clicks behind the wall, but it opens only an abandoned passage.", "message_zh": "墙后咔哒一声，开出来的只是一条早已废弃的暗道。"}},
+        {"id": "family_tree", "name": "family record beneath the bed", "name_zh": "床下族谱", "aliases": ["family record", "family tree", "under the bed", "Caesarean"], "result": {"type": "empty", "message": "It appears to be an ordinary genealogy. The note about birth may be no more than an old annotation.", "message_zh": "看起来是寻常族谱，那句关于出生的批注或许只是旧注。"}}
       ]
     }
   ],
   "ambient_locations": [
-    {"id": "lady_macbeth_room", "name": "Lady Macbeth's Room", "description": "The room smells of roses and iron. Candlelight trembles in a silver mirror, and a carved chest stands half-open near the bed."},
-    {"id": "cellar", "name": "Cellar", "description": "Wine barrels and herb shelves line damp stone walls. A bitter scent lingers in the air."},
-    {"id": "corridor", "name": "Castle Corridor", "description": "Stone walls stretch every footstep into an echo. The candles burn lower in the eastern gallery."},
-    {"id": "hall", "name": "Great Hall", "description": "The long tables still bear traces of last night's feast, while the hearth has gone cold."},
-    {"id": "kitchen", "name": "Kitchen", "description": "Warmth remains in the ovens, but the dishes have been washed and nothing unusual is visible."},
-    {"id": "servants_quarters", "name": "Servants' Quarters", "description": "The narrow beds are neatly made. The servants avoid speaking of what happened last night."},
-    {"id": "courtyard", "name": "Courtyard", "description": "Night dew darkens the stones, and the wind has scattered whatever footprints may once have remained."}
+    {"id": "lady_macbeth_room", "name": "Lady Macbeth's Room", "name_zh": "麦克白夫人房间", "description": "The room smells of roses and iron. Candlelight trembles in a silver mirror, and a carved chest stands half-open near the bed.", "description_zh": "空气里混着玫瑰和铁锈的气味，银镜中的烛光在抖，床边的雕花箱开着一条缝。"},
+    {"id": "cellar", "name": "Cellar", "name_zh": "地窖", "description": "Wine barrels and herb shelves line damp stone walls. A bitter scent lingers in the air.", "description_zh": "酒桶和香草架贴着潮湿的石墙，空气里有一股苦味。"},
+    {"id": "corridor", "name": "Castle Corridor", "name_zh": "城堡走廊", "description": "Stone walls stretch every footstep into an echo. The candles burn lower in the eastern gallery.", "description_zh": "石壁把你的脚步拉成回音，东廊的蜡烛烧得比别处低。"},
+    {"id": "hall", "name": "Great Hall", "name_zh": "大厅", "description": "The long tables still bear traces of last night's feast, while the hearth has gone cold.", "description_zh": "长桌上还留着昨夜宴席的痕迹，壁炉已经冷透。"},
+    {"id": "kitchen", "name": "Kitchen", "name_zh": "厨房", "description": "Warmth remains in the ovens, but the dishes have been washed and nothing unusual is visible.", "description_zh": "炉子里还有余温，餐具却全都洗过了，看不出异常。"},
+    {"id": "servants_quarters", "name": "Servants' Quarters", "name_zh": "仆人房间", "description": "The narrow beds are neatly made. The servants avoid speaking of what happened last night.", "description_zh": "窄床铺得整整齐齐，仆人们回避谈论昨夜的事。"},
+    {"id": "courtyard", "name": "Courtyard", "name_zh": "庭院", "description": "Night dew darkens the stones, and the wind has scattered whatever footprints may once have remained.", "description_zh": "夜露打湿了石板，风把可能存在的脚印都吹散了。"}
   ],
   "ambient_location_rule": {
     "send_clue": false,

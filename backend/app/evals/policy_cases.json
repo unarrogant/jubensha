@@ -1,0 +1,53 @@
+[
+  {
+    "name": "investigation_can_enter_location",
+    "tool": "enter_location",
+    "expected_allowed": true,
+    "state": {
+      "request_type": "player_private",
+      "player_id": "P1",
+      "context": {
+        "GAME_STATE": {"stage_id": "investigation"},
+        "CURRENT_STAGE": {"id": "investigation"}
+      }
+    }
+  },
+  {
+    "name": "voting_cannot_search",
+    "tool": "inspect_object",
+    "expected_allowed": false,
+    "state": {
+      "request_type": "player_private",
+      "player_id": "P1",
+      "context": {
+        "GAME_STATE": {"stage_id": "voting"},
+        "CURRENT_STAGE": {"id": "voting"}
+      }
+    }
+  },
+  {
+    "name": "discussion_can_submit_reasoning",
+    "tool": "unlock_reasoning_rule",
+    "expected_allowed": true,
+    "state": {
+      "request_type": "player_private",
+      "player_id": "P1",
+      "context": {
+        "GAME_STATE": {"stage_id": "discussion"},
+        "CURRENT_STAGE": {"id": "discussion"}
+      }
+    }
+  },
+  {
+    "name": "public_event_cannot_search",
+    "tool": "enter_location",
+    "expected_allowed": false,
+    "state": {
+      "request_type": "public_event",
+      "context": {
+        "GAME_STATE": {"stage_id": "investigation"},
+        "CURRENT_STAGE": {"id": "investigation"}
+      }
+    }
+  }
+]

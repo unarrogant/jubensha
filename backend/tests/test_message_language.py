@@ -1,4 +1,4 @@
-from app.services.message_service import MessageService
+from app.application.messaging.service import MessageService
 
 
 def test_player_message_accepts_english_requests():

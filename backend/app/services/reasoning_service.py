@@ -1,5 +1,12 @@
+from app.interfaces.ports import RoomRepositoryPort, ScriptBundlePort
+
+
 class ReasoningService:
-    def __init__(self, room_repository, bundle_loader):
+    def __init__(
+        self,
+        room_repository: RoomRepositoryPort,
+        bundle_loader: ScriptBundlePort,
+    ):
         self.room_repository = room_repository
         self.bundle_loader = bundle_loader
 

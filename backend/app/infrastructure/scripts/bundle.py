@@ -1,7 +1,8 @@
 import json
 from pathlib import Path
 
-from app.services.script_loader import CONTENT_ROOT,ScriptLoader
+from app.infrastructure.scripts.loader import CONTENT_ROOT, ScriptLoader
+from app.interfaces.ports import ScriptBundlePort
 
 SCRIPT_FILES={
     "characters":"characters.json",
@@ -13,7 +14,7 @@ SCRIPT_FILES={
     "vocabulary":"vocabulary.json",
 }
 
-class ScriptBundleLoader:
+class ScriptBundleLoader(ScriptBundlePort):
     def __init__(self,content_root:Path=CONTENT_ROOT):
         self.content_root=content_root
         self.script_loader=ScriptLoader(content_root)

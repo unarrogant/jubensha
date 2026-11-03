@@ -33,30 +33,31 @@ async function submit() {
 </script>
 
 <template>
-  <main class="admin-login-page">
+  <main class="admin admin-login-page">
     <section class="admin-login-panel" aria-labelledby="admin-login-title">
-      <div class="admin-login-mark"><ShieldCheck :size="25" /></div>
-      <span class="admin-eyebrow">SCRIPT KILL CONTROL</span>
-      <h1 id="admin-login-title">管理后台</h1>
-      <p class="admin-login-subtitle">查看运行中的房间与剧本服务状态</p>
+      <div class="admin-login-mark"><ShieldCheck :size="23" /></div>
+      <span class="admin-login-eyebrow">Curtain Between · Ops Console</span>
+      <h1 id="admin-login-title">幕间戏语运营台</h1>
+      <p class="admin-login-subtitle">房间运行、AI 主持与玩家行为的统一入口</p>
 
       <form class="admin-login-form" @submit.prevent="submit">
         <label>
           <span>管理员账号</span>
-          <input v-model="username" autocomplete="username" placeholder="输入账号" />
+          <input v-model="username" class="admin-login-inp" autocomplete="username" placeholder="输入账号" />
         </label>
         <label>
           <span>管理员密码</span>
           <input
             v-model="password"
+            class="admin-login-inp"
             type="password"
             autocomplete="current-password"
             placeholder="输入密码"
           />
         </label>
-        <p v-if="errorMessage" class="admin-alert" role="alert">{{ errorMessage }}</p>
-        <button class="button button-primary admin-login-button" type="submit" :disabled="loading">
-          <LogIn :size="16" />
+        <p v-if="errorMessage" class="admin-login-alert" role="alert">{{ errorMessage }}</p>
+        <button class="admin-login-submit" type="submit" :disabled="loading">
+          <LogIn :size="15" />
           {{ loading ? "验证中..." : "登录管理后台" }}
         </button>
       </form>
@@ -66,52 +67,52 @@ async function submit() {
 
 <style scoped>
 .admin-login-page {
-  min-height: 100vh;
   display: grid;
+  grid-template-columns: 1fr;
   place-items: center;
+  height: 100vh;
   padding: 28px;
-  background: #eef1ee;
 }
 
 .admin-login-panel {
-  width: min(430px, 100%);
-  padding: 38px;
-  background: var(--surface);
+  width: min(420px, 100%);
+  padding: 34px 32px 30px;
   border: 1px solid var(--line);
-  border-top: 4px solid var(--green);
-  border-radius: 6px;
-  box-shadow: var(--shadow);
+  border-radius: var(--r);
+  background: var(--panel);
 }
 
 .admin-login-mark {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 22px;
-  color: #fff;
-  background: var(--green);
-  border-radius: 4px;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 20px;
+  color: var(--acc-soft);
+  background: var(--acc-dim);
+  border: 1px solid var(--acc-line);
+  border-radius: 12px;
 }
 
-.admin-eyebrow {
-  color: var(--red);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+.admin-login-eyebrow {
+  font-size: 10.5px;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
 
-h1 {
-  margin: 8px 0 7px;
-  font-family: Georgia, "Songti SC", serif;
-  font-size: 32px;
+.admin-login-panel h1 {
+  margin: 10px 0 6px;
+  font-family: var(--serif);
+  font-size: 26px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .admin-login-subtitle {
-  margin-bottom: 28px;
+  margin: 0 0 26px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 12.5px;
 }
 
 .admin-login-form {
@@ -119,30 +120,63 @@ h1 {
   gap: 16px;
 }
 
-.admin-login-form label {
-  display: grid;
-  gap: 7px;
-}
-
-.admin-login-form label span {
+.admin-login-form label > span {
+  display: block;
+  margin-bottom: 7px;
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: .1em;
 }
 
-.admin-login-button {
+.admin-login-inp {
   width: 100%;
-  margin-top: 4px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: rgba(4, 6, 11, .6);
+  border: 1px solid var(--line-2);
+  border-radius: 11px;
+  font-size: 14px;
+  transition: .2s;
 }
 
-.admin-alert {
+.admin-login-inp:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--acc-dim);
+}
+
+.admin-login-alert {
   margin: 0;
   padding: 10px 12px;
-  color: #74272d;
-  background: var(--red-soft);
-  border: 1px solid #e5bdc0;
-  border-radius: 4px;
-  font-size: 11px;
+  color: #f0a5a5;
+  background: rgba(217, 106, 106, .08);
+  border: 1px solid rgba(217, 106, 106, .42);
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.admin-login-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px;
+  color: #08110f;
+  background: var(--acc);
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: .18s var(--ease);
+}
+
+.admin-login-submit:hover:not(:disabled) {
+  background: var(--acc-soft);
+}
+
+.admin-login-submit:disabled {
+  opacity: .55;
+  cursor: default;
 }
 
 @media (max-width: 500px) {
@@ -151,7 +185,7 @@ h1 {
   }
 
   .admin-login-panel {
-    padding: 28px 22px;
+    padding: 26px 20px;
   }
 }
 </style>

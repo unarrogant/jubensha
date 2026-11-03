@@ -2,79 +2,57 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
-import {
-  Bot,
-  Check,
-  Clock3,
-  DoorOpen,
-  LogIn,
-  Plus,
-  RefreshCw,
-  Search,
-  Users,
-  X,
-} from "@lucide/vue";
-import AppHeader from "../components/AppHeader.vue";
+import { Check, RefreshCw } from "@lucide/vue";
+import HubHeader from "../components/HubHeader.vue";
 import { useRoomStore } from "../stores/room";
 
 const route = useRoute();
 const router = useRouter();
 const roomStore = useRoomStore();
-const {
-  scripts,
-  waitingRooms,
-  selectedScriptId,
-  selectedScript,
-  catalogLoading,
-  roomsLoading,
-} = storeToRefs(roomStore);
+const { scripts, waitingRooms, selectedScriptId, selectedScript, catalogLoading, roomsLoading } =
+  storeToRefs(roomStore);
 
-const mode = ref("create");
 const hostName = ref("");
-const roomCode = ref("");
 const joinName = ref("");
-const searchText = ref("");
+const roomCode = ref("");
+const joinMode = ref("list");
 const submitting = ref(false);
 const errorMessage = ref("");
 const coverFailures = ref({});
 let refreshTimer = null;
 
-const filteredScripts = computed(() => {
-  const keyword = searchText.value.trim().toLowerCase();
-  if (!keyword) return scripts.value;
-  return scripts.value.filter((script) =>
-    [script.title, script.summary, ...(script.tags || [])]
-      .join(" ")
-      .toLowerCase()
-      .includes(keyword),
-  );
-});
+const hallTheme = computed(() =>
+  roomStore.getThemeVars(selectedScript.value || scripts.value[0]),
+);
 
-function getRoomScript(room) {
+function scriptOf(room) {
   return roomStore.getScript(room.script_id);
 }
 
-function chooseScript(scriptId) {
+function pick(scriptId) {
   roomStore.selectScript(scriptId);
-  mode.value = "create";
   errorMessage.value = "";
+}
+
+function setJoinMode(mode) {
+  joinMode.value = mode;
 }
 
 function prepareJoin(room) {
   roomCode.value = room.id;
-  mode.value = "join";
+  joinMode.value = "code";
   errorMessage.value = "";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  document.getElementById("join-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
- async function handleCreate() {
+async function handleCreate() {
   errorMessage.value = "";
   if (!selectedScript.value) {
-    errorMessage.value = "请先从剧本库选择一个剧本";
+    errorMessage.value = "请先从剧本大厅选择一部剧本";
     return;
   }
   if (!hostName.value.trim()) {
-    errorMessage.value = "请输入你的玩家名称";
+    errorMessage.value = "请输入你的玩家昵称";
     return;
   }
 
@@ -92,30 +70,18 @@ function prepareJoin(room) {
 async function handleJoin() {
   errorMessage.value = "";
   if (!roomCode.value.trim() || !joinName.value.trim()) {
-    errorMessage.value = "请输入房间号和玩家名称";
+    errorMessage.value = "请输入房间号和玩家昵称";
     return;
   }
 
   submitting.value = true;
   try {
-    const result = await roomStore.joinExistingRoom(
-      roomCode.value,
-      joinName.value.trim(),
-    );
+    const result = await roomStore.joinExistingRoom(roomCode.value, joinName.value.trim());
     await router.push(`/lobby/${result.roomId}`);
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
     submitting.value = false;
-  }
-}
-
-async function loadPlatform() {
-  errorMessage.value = "";
-  try {
-    await Promise.all([roomStore.loadScripts(), roomStore.loadWaitingRooms()]);
-  } catch (error) {
-    errorMessage.value = error.message;
   }
 }
 
@@ -128,11 +94,18 @@ async function refreshRoomsSilently() {
 }
 
 onMounted(async () => {
-  await loadPlatform();
+  errorMessage.value = "";
+  try {
+    await Promise.all([roomStore.loadScripts(), roomStore.loadWaitingRooms()]);
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+
   if (route.query.room) {
     roomCode.value = String(route.query.room).toUpperCase();
-    mode.value = "join";
+    joinMode.value = "code";
   }
+
   refreshTimer = window.setInterval(refreshRoomsSilently, 6000);
 });
 
@@ -142,152 +115,220 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell">
-    <AppHeader>
-      <template #center>
-        <nav class="header-nav" aria-label="主要导航">
-          <a class="active" href="#scripts">剧本库</a>
-          <a href="#rooms">公开房间</a>
-        </nav>
-      </template>
-    </AppHeader>
+  <div class="hub" :style="hallTheme">
+    <div class="hub-inner">
+      <HubHeader>
+        <template #center>
+          <nav class="topnav">
+            <a href="#scripts">剧本大厅</a>
+            <a href="#open-rooms">开放房间</a>
+            <RouterLink to="/admin/login">管理端</RouterLink>
+          </nav>
+        </template>
+        <template #actions>
+          <span class="pill"><span class="dot"></span>服务在线</span>
+        </template>
+      </HubHeader>
 
-    <main class="hub-main">
-      <section class="hub-heading">
-        <div>
-          <span class="overline">AI MYSTERY LOBBY</span>
-          <h1>今晚，开一局好戏</h1>
-          <p>选择剧本，召集同局玩家。人数到齐后，AI 主持人将接管流程。</p>
-        </div>
-        <dl class="hub-summary">
-          <div><dt>{{ scripts.length }}</dt><dd>可用剧本</dd></div>
-          <div><dt>{{ waitingRooms.length }}</dt><dd>等待房间</dd></div>
-        </dl>
-      </section>
-
-      <section class="quick-panel" aria-label="创建或加入房间">
-        <div class="mode-switch">
-          <button :class="{ active: mode === 'create' }" type="button" @click="mode = 'create'">
-            <Plus :size="17" />创建房间
-          </button>
-          <button :class="{ active: mode === 'join' }" type="button" @click="mode = 'join'">
-            <LogIn :size="17" />加入房间
-          </button>
-        </div>
-
-        <form v-if="mode === 'create'" class="quick-form" @submit.prevent="handleCreate">
-          <div class="chosen-script">
-            <span>当前剧本</span>
-            <strong>{{ selectedScript?.title || "尚未选择" }}</strong>
+      <main class="wrap">
+        <section class="hall-head">
+          <span class="overline">Tonight · Four Stories Open</span>
+          <h1>灯已经暗下，<em>{{ scripts.length }} 出戏同时在等</em></h1>
+          <p>不必搜索，不必筛选。挑一部剧本，AI 主持人推进流程、判定搜证、发放线索，你和朋友进入同一个现场。</p>
+          <div class="hall-stats">
+            <span>本晚上演 <b>{{ String(scripts.length).padStart(2, "0") }}</b> 部</span>
+            <span>等待入席 <b>{{ String(waitingRooms.length).padStart(2, "0") }}</b> 间</span>
+            <span>全程 <b>AI</b> 主持</span>
           </div>
-          <label>
-            <span>你的玩家名称</span>
-            <input v-model="hostName" maxlength="20" autocomplete="nickname" placeholder="例如：林默" />
-          </label>
-          <button class="button button-primary" :disabled="submitting || !selectedScript">
-            <DoorOpen :size="17" />{{ submitting ? "正在创建" : "创建房间" }}
-          </button>
-        </form>
+        </section>
 
-        <form v-else class="quick-form join-form" @submit.prevent="handleJoin">
-          <label>
-            <span>房间号</span>
-            <input v-model="roomCode" maxlength="8" autocomplete="off" placeholder="8 位房间号" />
-          </label>
-          <label>
-            <span>你的玩家名称</span>
-            <input v-model="joinName" maxlength="20" autocomplete="nickname" placeholder="其他玩家会看到此名称" />
-          </label>
-          <button class="button button-primary" :disabled="submitting">
-            <LogIn :size="17" />{{ submitting ? "正在加入" : "进入房间" }}
-          </button>
-        </form>
-
-        <div v-if="errorMessage" class="inline-alert">
+        <div v-if="errorMessage" class="alert" role="alert">
           <span>{{ errorMessage }}</span>
-          <button type="button" aria-label="关闭" @click="errorMessage = ''"><X :size="16" /></button>
+          <button type="button" @click="errorMessage = ''">关闭</button>
         </div>
-      </section>
 
-      <section id="scripts" class="content-section">
-        <header class="section-bar">
-          <div>
-            <span class="overline">SCRIPT LIBRARY</span>
-            <h2>选择本次剧本</h2>
+        <section id="scripts">
+          <div class="sec-head">
+            <h2>剧本大厅</h2>
+            <small>点击卡片选中，下方创建区与整站配色同步切换</small>
           </div>
-          <label class="search-box">
-            <Search :size="16" />
-            <input v-model="searchText" aria-label="搜索剧本" placeholder="搜索剧本或标签" />
-          </label>
-        </header>
 
-        <div v-if="catalogLoading" class="loading-state"><span>正在读取剧本库…</span></div>
-        <div v-else-if="!filteredScripts.length" class="empty-state">
-          <Search :size="24" /><strong>没有找到剧本</strong><span>换一个关键词试试。</span>
-        </div>
-        <div v-else class="script-grid">
-          <article
-            v-for="script in filteredScripts"
-            :key="script.id"
-            class="script-card"
-            :class="{ selected: selectedScriptId === script.id }"
-          >
-            <button class="script-poster" type="button" @click="chooseScript(script.id)">
-              <img
-                v-if="!coverFailures[script.id]"
-                :src="roomStore.getCoverUrl(script)"
-                :alt="`${script.title}封面`"
-                @error="coverFailures[script.id] = true"
-              />
-              <span v-else class="poster-fallback">{{ script.title.slice(0, 1) }}</span>
-              <span class="script-state">{{ script.status === "draft" ? "测试版" : "可开局" }}</span>
-              <span v-if="selectedScriptId === script.id" class="selected-mark"><Check :size="13" />已选择</span>
+          <div v-if="catalogLoading" class="loader"><i></i><span>正在读取剧本库…</span></div>
+          <div v-else-if="!scripts.length" class="empty">
+            <strong>剧本库暂时为空</strong>
+            <span>content 目录里还没有已发布的剧本，请稍后重新进入。</span>
+          </div>
+          <div v-else class="scripts">
+            <article
+              v-for="script in scripts"
+              :key="script.id"
+              class="script"
+              :class="{ sel: selectedScriptId === script.id }"
+              :style="roomStore.getScriptCardVars(script)"
+              role="button"
+              tabindex="0"
+              @click="pick(script.id)"
+              @keydown.enter.prevent="pick(script.id)"
+            >
+              <div class="poster">
+                <img
+                  v-if="!coverFailures[script.id]"
+                  :src="roomStore.getCoverUrl(script)"
+                  :alt="`${roomStore.getDisplayName(script)}封面`"
+                  @error="coverFailures[script.id] = true"
+                />
+                <span v-else class="poster-fallback">{{ roomStore.getDisplayName(script).slice(0, 1) }}</span>
+                <div class="poster-top">
+                  <span class="kind">{{ roomStore.getScriptTypeLabel(script) }}</span>
+                  <span class="tick"><Check :size="13" /></span>
+                </div>
+                <div class="poster-name">
+                  <span>V{{ script.version }} · {{ (script.language || "en").toUpperCase() }}</span>
+                  <b>{{ roomStore.getDisplayName(script) }}</b>
+                </div>
+              </div>
+              <div class="script-body">
+                <p class="sum">{{ roomStore.getDisplaySummary(script) }}</p>
+                <div class="kv">
+                  <span><i>{{ script.player_count }}</i> 人</span>
+                  <span><i>{{ script.estimated_minutes }}</i> 分钟</span>
+                  <span><i>AI</i> 全程主持</span>
+                </div>
+                <div class="dm-row"><span class="dot"></span>主持人 <b>{{ roomStore.getDmName(script) }}</b></div>
+                <button class="choose" type="button">
+                  {{ selectedScriptId === script.id ? "已选择此剧本" : "选择此剧本" }}
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <div class="duo">
+          <section class="card create" id="quick-start">
+            <span class="overline">Create Room</span>
+            <h3>创建房间</h3>
+
+            <div v-if="selectedScript" class="echo">
+              <img :src="roomStore.getCoverUrl(selectedScript)" :alt="roomStore.getDisplayName(selectedScript)" />
+              <div>
+                <b>{{ roomStore.getDisplayName(selectedScript) }}</b>
+                <span>{{ selectedScript.title }} · v{{ selectedScript.version }}</span>
+              </div>
+            </div>
+            <div v-else class="create-empty">先在上方选择一部剧本，创建区会同步它的封面与人数要求。</div>
+
+            <div v-if="selectedScript" class="req">
+              <span>需要 <b>{{ selectedScript.player_count }}</b> 名玩家</span>
+              <span>预计 <b>{{ selectedScript.estimated_minutes }}</b> 分钟</span>
+              <span><b>AI</b> 主持 · {{ roomStore.getDmName(selectedScript) }}</span>
+            </div>
+
+            <label class="field" for="host-name">你的玩家昵称</label>
+            <input
+              id="host-name"
+              v-model="hostName"
+              class="inp"
+              maxlength="20"
+              autocomplete="nickname"
+              placeholder="其他玩家会看到这个名字"
+            />
+            <button
+              class="btn-main"
+              type="button"
+              :disabled="submitting || !selectedScript"
+              @click="handleCreate"
+            >
+              {{ submitting ? "正在创建" : "基于当前剧本创建房间" }}
             </button>
+            <p class="note">创建后进入等待大厅，房间数据会写入 script_id、剧本名称、版本、封面与规定人数。</p>
+          </section>
 
-            <div class="script-content">
-              <div class="script-title-row">
-                <div><span>{{ script.type === "murder_mystery" ? "推理剧本" : script.type }}</span><h3>{{ script.title }}</h3></div>
-                <span>v{{ script.version }}</span>
-              </div>
-              <p>{{ script.summary }}</p>
-              <div class="meta-row">
-                <span><Users :size="14" />{{ script.player_count }} 人</span>
-                <span><Clock3 :size="14" />{{ script.estimated_minutes }} 分钟</span>
-                <span><Bot :size="14" />{{ script.agent_profile?.display_name }}</span>
-              </div>
-              <div class="tag-row"><span v-for="tag in script.tags" :key="tag">{{ tag }}</span></div>
-              <button class="text-action" type="button" @click="chooseScript(script.id)">
-                <Check v-if="selectedScriptId === script.id" :size="14" />
-                {{ selectedScriptId === script.id ? "已选中此剧本" : "选择此剧本" }}
+          <section class="card join-card" id="join-card">
+            <span class="overline">Open Rooms</span>
+            <h3>加入房间</h3>
+
+            <div class="join-tabs">
+              <button :class="{ on: joinMode === 'list' }" type="button" @click="setJoinMode('list')">
+                从开放列表选择
+              </button>
+              <button :class="{ on: joinMode === 'code' }" type="button" @click="setJoinMode('code')">
+                输入房间号
               </button>
             </div>
-          </article>
-        </div>
-      </section>
 
-      <section id="rooms" class="content-section room-section">
-        <header class="section-bar">
-          <div><span class="overline">OPEN ROOMS</span><h2>等待玩家加入</h2></div>
-          <button class="icon-text-button" type="button" :disabled="roomsLoading" @click="roomStore.loadWaitingRooms">
-            <RefreshCw :size="15" :class="{ spinning: roomsLoading }" />刷新房间
-          </button>
-        </header>
+            <template v-if="joinMode === 'list'">
+              <div class="sec-head" style="margin: 0 0 6px">
+                <small>共 {{ waitingRooms.length }} 间 · 每 6 秒同步</small>
+                <button class="btn-ghost" type="button" :disabled="roomsLoading" @click="roomStore.loadWaitingRooms">
+                  <RefreshCw :size="13" :class="{ spinning: roomsLoading }" /> 刷新
+                </button>
+              </div>
 
-        <div v-if="waitingRooms.length" class="room-list">
-          <article v-for="room in waitingRooms" :key="room.id" class="room-item">
-            <div class="room-code-block"><span>房间号</span><strong>{{ room.id }}</strong></div>
-            <div class="room-script-name"><strong>{{ getRoomScript(room)?.title || room.script_id }}</strong><span>{{ room.host_name }} 创建</span></div>
-            <div class="room-capacity">
-              <div><span>当前人数</span><strong>{{ room.player_count }} / {{ room.required_players }}</strong></div>
-              <span class="capacity-track"><i :style="{ width: `${(room.player_count / room.required_players) * 100}%` }"></i></span>
-            </div>
-            <button class="button button-secondary" type="button" @click="prepareJoin(room)">加入</button>
-          </article>
+              <div v-if="!waitingRooms.length" class="create-empty">
+                当前没有公开房间。选中一部剧本，创建今晚的第一间房。
+              </div>
+              <button
+                v-for="room in waitingRooms"
+                :key="room.id"
+                class="room"
+                type="button"
+                @click="prepareJoin(room)"
+              >
+                <img
+                  v-if="scriptOf(room) && !coverFailures[room.id]"
+                  :src="roomStore.getCoverUrl(scriptOf(room))"
+                  :alt="roomStore.getDisplayName(scriptOf(room))"
+                  @error="coverFailures[room.id] = true"
+                />
+                <span v-else class="room-fallback">
+                  {{ roomStore.getDisplayName(scriptOf(room)).slice(0, 1) || "?" }}
+                </span>
+                <div>
+                  <b>{{ roomStore.getDisplayName(scriptOf(room)) || room.script_id }}</b>
+                  <small>房主 {{ room.host_name }} · {{ room.id }}</small>
+                  <div class="track" style="margin-top: 7px">
+                    <i :style="{ width: `${Math.min(100, (room.player_count / room.required_players) * 100)}%` }"></i>
+                  </div>
+                </div>
+                <div class="capacity-cell">
+                  <span class="num">{{ room.player_count }} / {{ room.required_players }}</span>
+                  <small>需要 {{ room.required_players }} 人</small>
+                </div>
+                <span class="st-badge" :class="room.player_count >= room.required_players ? 'st-full' : 'st-wait'">
+                  {{ room.player_count >= room.required_players ? "人数已满" : "等待玩家" }}
+                </span>
+              </button>
+            </template>
+
+            <form v-else class="code-form" @submit.prevent="handleJoin">
+              <div>
+                <label class="field" for="room-code">8 位房间号</label>
+                <input
+                  id="room-code"
+                  v-model="roomCode"
+                  class="inp"
+                  maxlength="8"
+                  autocomplete="off"
+                  placeholder="A3F7K2QD"
+                  style="font-family: var(--mono); letter-spacing: .18em"
+                />
+              </div>
+              <div>
+                <label class="field" for="join-name">玩家昵称</label>
+                <input id="join-name" v-model="joinName" class="inp" maxlength="20" placeholder="例如：陈屿" />
+              </div>
+              <button class="btn-ghost" type="submit" style="height: 43px" :disabled="submitting">
+                {{ submitting ? "正在加入" : "进入" }}
+              </button>
+            </form>
+          </section>
         </div>
-        <div v-else-if="!roomsLoading" class="empty-state">
-          <DoorOpen :size="24" /><strong>当前没有公开房间</strong><span>选择剧本，创建今晚的第一间房。</span>
-        </div>
-      </section>
-    </main>
+      </main>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.spinning { animation: hubspin 1s linear infinite; }
+.room .poster-fallback { display: grid; place-items: center; font-family: var(--serif); }
+</style>

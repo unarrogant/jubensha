@@ -1,6 +1,9 @@
 from fastapi import WebSocket, WebSocketDisconnect
 
-class ConnectionManager:
+from app.interfaces.ports import EventPublisherPort
+
+
+class ConnectionManager(EventPublisherPort):
     def __init__(self):
         self.connections:dict[
             str,

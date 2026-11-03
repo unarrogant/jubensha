@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.services.investigation_service import InvestigationService
+from app.application.investigation.service import InvestigationService
 from app.services.reasoning_service import ReasoningService
 
 

@@ -2,12 +2,12 @@ import asyncio
 
 from fastapi import APIRouter,HTTPException
 
-from app.repositories.room_repository import RoomRepository
+from app.infrastructure.repositories.room import RoomRepository
 from app.schemas.room import RoomCreate,RoomCreateResponse,RoomListItem,RoomPublic,RoomStart,RoomExit,RoomExitResponse
 from app.schemas.players import PlayerJoin,PlayerJoinResponse,PlayerListItem,CharacterPrivate
-from app.services.role_service import RoleService
-from app.services.script_bundle import ScriptBundleLoader
-from app.services.game_service import GameService
+from app.application.role.service import RoleService
+from app.infrastructure.scripts.bundle import ScriptBundleLoader
+from app.application.game.service import GameService
 from app.schemas.game import (
     GameStatePublic,
     PeerReviewCreate,
@@ -17,21 +17,27 @@ from app.schemas.game import (
     VoteResponse,
     VoteStatus,
 )
-from app.schemas.investigation import EnterLocationRequest,InspectObjectRequest,InvestigationMessage
-from app.services.investigation_service import InvestigationService
+from app.schemas.investigation import EnterLocationRequest,InspectObjectRequest,InvestigationMessage,InvestigationLocationsPublic
+from app.application.investigation.service import InvestigationService
 from app.schemas.clue import CluePublic
 from app.schemas.message import  PlayerPrivateMessageCreate,PlayerPrivateMessagePublic
 from app.schemas.dm import DMMessagePublic
-from app.services.message_service import MessageService
-from app.services.dm_service import DMService
-from app.realtime.connection_manager import connection_manager
-from app.services.dm_agent_service import DMAgentService
-from app.services.game_orchestrator_service import GameOrchestratorService
+from app.application.messaging.service import MessageService
+from app.application.messaging.dm import DMService
+from app.infrastructure.realtime.manager import connection_manager
+from app.infrastructure.agent.idempotency import IdempotencyService
+from app.infrastructure.agent.checkpoint import RedisCheckpointFactory
+from app.infrastructure.realtime.room_lock import RedisRoomExecutionLock
+from app.application.agent.service import DMAgentService
+from app.application.game.orchestrator import GameOrchestratorService
 from app.services.reasoning_service import ReasoningService
 
 router=APIRouter()
 room_repository=RoomRepository()
 bundle_loader=ScriptBundleLoader()
+idempotency_service=IdempotencyService()
+checkpoint_factory=RedisCheckpointFactory()
+execution_lock=RedisRoomExecutionLock()
 role_service=RoleService(
     room_repository=room_repository,
     bundle_loader=bundle_loader,
@@ -60,6 +66,8 @@ dm_agent_service = DMAgentService(
     bundle_loader=bundle_loader,
     investigation_service=investigation_service,
     reasoning_service=reasoning_service,
+    idempotency_service=idempotency_service,
+    checkpoint_factory=checkpoint_factory,
 )
 game_orchestrator_service = GameOrchestratorService(
     room_repository=room_repository,
@@ -68,6 +76,7 @@ game_orchestrator_service = GameOrchestratorService(
     dm_agent_service=dm_agent_service,
     dm_service=dm_service,
     connection_manager=connection_manager,
+    execution_lock=execution_lock,
 )
 
 EMPTY_ROOM_GRACE_SECONDS = 60
@@ -580,13 +589,24 @@ async def get_my_character(
     for character in bundle["characters"]:
         if character.get("id")==character_id:
             character_private = dict(character)
-            character_private["vocabulary"] = bundle.get(
-                "vocabulary",
-                {},
-            ).get(character_id, [])
-            character_private["language_scaffold"] = bundle.get(
-                "language_scaffold",
-                {},
+            vocabulary = bundle.get("vocabulary", {})
+            if isinstance(vocabulary, dict):
+                character_private["vocabulary"] = vocabulary.get(
+                    character_id,
+                    [],
+                )
+            elif isinstance(vocabulary, list):
+                # Some scripts provide one shared vocabulary list (or an
+                # empty list) instead of a character-id mapping.
+                character_private["vocabulary"] = vocabulary
+            else:
+                character_private["vocabulary"] = []
+
+            language_scaffold = bundle.get("language_scaffold", {})
+            character_private["language_scaffold"] = (
+                language_scaffold
+                if isinstance(language_scaffold, dict)
+                else {}
             )
             return character_private
 
@@ -735,6 +755,30 @@ async def submit_peer_review(room_id: str, data: PeerReviewCreate):
         raise HTTPException(status_code=400, detail=str(error)) from error
 
 
+@router.get(
+    "/{room_id}/investigation/locations",
+    response_model=InvestigationLocationsPublic,
+)
+async def list_investigation_locations(
+    room_id:str,
+    player_id:str,
+):
+    try:
+        return investigation_service.list_visible_locations(
+            room_id=room_id,
+            player_id=player_id,
+        )
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )from error
+
 @router.post(
     "/{room_id}/investigation/enter",
     response_model=InvestigationMessage,
@@ -747,7 +791,8 @@ async def enter_location(
         result=investigation_service.enter_location(
             room_id=room_id,
             player_id=data.player_id,
-            location_id=data.location_id
+            location_id=data.location_id,
+            with_objects=True,
         )
         room_repository.record_event(
             room_id, "LOCATION_ENTERED", actor_player_id=data.player_id,
@@ -820,6 +865,18 @@ async def inspect_object(
                 else []
             ),
         )
+
+        # 公开线索已在服务里写进每个玩家的线索墙，这里只通知客户端重新拉取。
+        if result.get("clue_id") and result.get("visibility") == "public":
+            await connection_manager.broadcast_room(
+                room_id=room_id,
+                event={
+                    "type": "CLUE_WALL_UPDATED",
+                    "clue_id": result["clue_id"],
+                    "visibility": "public",
+                    "player_id": data.player_id,
+                },
+            )
 
         return result
     except FileNotFoundError as error:

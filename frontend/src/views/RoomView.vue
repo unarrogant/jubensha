@@ -1,31 +1,13 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import {
-  BookOpen,
-  Bot,
-  CheckCircle2,
-  Clock3,
-  FileKey2,
-  KeyRound,
-  LogOut,
-  Mic,
-  MicOff,
-  Radio,
-  Send,
-  ShieldAlert,
-  Users,
-  Volume2,
-  Wifi,
-  WifiOff,
-} from "@lucide/vue";
-import AppHeader from "../components/AppHeader.vue";
+import { LogOut, Mic, MicOff, Send } from "@lucide/vue";
+import HubHeader from "../components/HubHeader.vue";
 import AnnotatedText from "../components/AnnotatedText.vue";
 import {
   getGameState,
   getMessages,
   getMyCharacter,
-  getMyClues,
   getRoom,
   getRoomPlayers,
   getPeerReviewStatus,
@@ -37,14 +19,18 @@ import {
 import { RoomWebSocket } from "../services/websocket";
 import { WebRTCVoiceClient } from "../services/webrtc";
 import { useRoomStore } from "../stores/room";
+import { useClueStore } from "../stores/clues";
+import { useInvestigationStore } from "../stores/investigation";
 
 const route = useRoute();
 const router = useRouter();
 const roomStore = useRoomStore();
+const clueStore = useClueStore();
+const investigationStore = useInvestigationStore();
+
 const room = ref(null);
 const players = ref([]);
 const character = ref(null);
-const clues = ref([]);
 const gameState = ref(null);
 const messages = ref([]);
 const messageText = ref("");
@@ -54,9 +40,12 @@ const awaitingHost = ref(false);
 const stageAnnouncementPending = ref(false);
 const errorMessage = ref("");
 const connectionState = ref("connecting");
-const activeCaseTab = ref("clues");
-const activeScaffoldTab = ref("vocabulary");
+const activeRailTab = ref("clues");
 const remainingSeconds = ref(null);
+const pendingAction = ref(null);
+const wsToast = ref({ text: "", clueId: "", on: false });
+const expandedClueIds = ref([]);
+const openedClue = ref(null);
 const voteStatus = ref({
   has_voted: false,
   suspect_id: null,
@@ -85,16 +74,20 @@ const voiceState = ref("idle");
 const voicePeers = ref({});
 const speakingPlayerIds = ref([]);
 const messageList = ref(null);
+const composerInput = ref(null);
 const remoteAudioContainer = ref(null);
 let roomSocket = null;
 let voiceClient = null;
 let clockTimer = null;
 let stateSyncTimer = null;
+let toastTimer = null;
 let hasConnectedOnce = false;
 
 const roomId = computed(() => String(route.params.roomId).toUpperCase());
 const session = computed(() => roomStore.readSession(roomId.value));
+const playerId = computed(() => session.value?.playerId || "");
 const script = computed(() => roomStore.getScript(room.value?.script_id));
+const themeVars = computed(() => roomStore.getThemeVars(script.value));
 const stageOrder = {
   waiting: 0,
   role_selection: 1,
@@ -104,32 +97,27 @@ const stageOrder = {
   voting: 5,
   ending: 6,
 };
-const stageName = computed(() => {
-  const names = {
-    intro: "Character Introductions",
-    investigation: "Investigation",
-    discussion: "Discussion and Deduction",
-    voting: "最终投票",
-    ending: "最终复盘",
-  };
-  return gameState.value?.stage_name
-    || names[gameState.value?.stage_id]
-    || "等待主持人";
-});
+const stageNames = {
+  waiting: "等待入席",
+  role_selection: "角色分配",
+  intro: "自我介绍",
+  investigation: "搜证 · Investigation",
+  discussion: "讨论推理",
+  voting: "最终投票",
+  ending: "最终复盘",
+};
+const stageName = computed(() => stageNames[gameState.value?.stage_id] || "等待主持人");
 const stageTasks = {
-  intro: "请用角色身份介绍公开信息，不要透露角色卡上的秘密。你可以在对话框里向主持人提问。",
-  investigation: "选择地点、检查物品，或提交你的推理。你可以在对话框里向主持人询问，符合条件的推理可能解锁证据。",
+  intro: "请用角色身份介绍公开信息，不要透露角色卡上的秘密。你也可以在对话框里向主持人提问。",
+  investigation: "先点地点，再点物品。点击只会把中文句子填进输入框，发送后才会交给后端与 AI 主持人判定。",
   discussion: "分享线索、质疑观点并整理最终推理。搜证已经结束，但仍可以向主持人提问或提交推理。",
-  voting: "选择你认为最合理的最终答案，并完成一次投票。当前阶段不能继续搜证或提交新推理。",
+  voting: "选择你认为最合理的最终答案，并完成一次投票。当前阶段不能继续搜证。",
   ending: "听主持人还原完整经过、公布投票结果，并说明每位角色的最终命运。",
 };
 const currentStageTask = computed(() =>
-  stageTasks[gameState.value?.stage_id]
-  || "Wait for the host to announce the next instruction.",
+  stageTasks[gameState.value?.stage_id] || "等待主持人宣布下一步安排。",
 );
-const canExitRoom = computed(
-  () => Boolean(room.value),
-);
+const canExitRoom = computed(() => Boolean(room.value));
 const formattedTime = computed(() => {
   if (remainingSeconds.value === null) return "--:--";
   const minutes = Math.floor(remainingSeconds.value / 60);
@@ -140,11 +128,17 @@ const myPublicPlayer = computed(() =>
   players.value.find((player) => player.name === session.value?.playerName),
 );
 const currentSpeakingPlayer = computed(() => {
-  for (const playerId of [...speakingPlayerIds.value].reverse()) {
-    const player = players.value.find((item) => item.id === playerId);
+  for (const id of [...speakingPlayerIds.value].reverse()) {
+    const player = players.value.find((item) => item.id === id);
     if (player) return player;
   }
   return null;
+});
+const speakingPosition = computed(() => {
+  if (!currentSpeakingPlayer.value) return 0;
+  return players.value.findIndex(
+    (player) => player.id === currentSpeakingPlayer.value.id,
+  ) + 1;
 });
 const onlineVoiceCount = computed(() =>
   Object.values(voicePeers.value).filter(
@@ -156,6 +150,14 @@ const characterAvatarUrl = computed(() =>
 );
 const characterVocabulary = computed(() => character.value?.vocabulary || []);
 const languageScaffold = computed(() => character.value?.language_scaffold || {});
+const canInvestigate = computed(() => gameState.value?.stage_id === "investigation");
+const connectionLabel = computed(() =>
+  connectionState.value === "online"
+    ? `已连接 · ${onlineVoiceCount.value} 人在线`
+    : "正在重连",
+);
+const hostName = computed(() => roomStore.getDmName(script.value));
+const scriptName = computed(() => roomStore.getDisplayName(script.value));
 const hostAvatarUrl = computed(() =>
   roomStore.getAssetUrl(script.value, script.value?.agent_profile?.avatar),
 );
@@ -293,16 +295,39 @@ function getRelationshipName(relationship) {
     malcolm: "Malcolm",
     macduff: "Macduff",
   };
-  return knownNames[relationship?.target_id] || "Unknown character";
+  return knownNames[relationship?.target_id] || "未知角色";
+}
+
+function flashToast(text, clueId = "") {
+  wsToast.value = { text, clueId, on: true };
+  if (toastTimer) window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    wsToast.value = { ...wsToast.value, on: false };
+  }, 3400);
 }
 
 function getClueAssetUrl(clue) {
-  const match = String(clue?.id || "").match(/(\d+)$/);
-  return match ? `/img/clue${Number(match[1])}.jpg` : "";
+  return roomStore.getClueAssetUrl(clue);
 }
 
 function hideBrokenClueImage(event) {
   event.currentTarget.hidden = true;
+}
+
+function clueChipLabel(clueId) {
+  const clue = clueStore.clueOf(clueId);
+  if (clue) return `◆ ${clueStore.clueTitle(clue)} · ${clue.title}`;
+  return `◆ 线索卡 ${String(clueId).replace("clue_", "#")}`;
+}
+
+function messageWho(message) {
+  if (message.type === "PLAYER_PRIVATE_MESSAGE") return "你 · 私信主持人";
+  if (message.channel === "PUBLIC_MESSAGE") return "主持人 · 公开";
+  return "主持人 · 仅你可见";
+}
+
+function messageKind(message) {
+  return message.type === "PLAYER_PRIVATE_MESSAGE" ? "me" : "dm";
 }
 
 function addMessage(message) {
@@ -315,6 +340,17 @@ function addMessage(message) {
     if (messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight;
   });
   updateStageAnnouncementPending();
+}
+
+// 搜证的句子由前端先补进聊天流，主持人的描述随后由 WebSocket 送达。
+function addLocalPlayerMessage(content) {
+  addMessage({
+    id: `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    type: "PLAYER_PRIVATE_MESSAGE",
+    channel: "PRIVATE_MESSAGE",
+    content,
+    created_at: new Date().toISOString(),
+  });
 }
 
 function updateStageAnnouncementPending() {
@@ -366,7 +402,7 @@ async function syncGameState() {
     const state = await getGameState(roomId.value);
     applyGameState(state);
     if (stageAnnouncementPending.value) {
-      const history = await getMessages(roomId.value, session.value.playerId);
+      const history = await getMessages(roomId.value, playerId.value);
       messages.value = history;
     }
     updateStageAnnouncementPending();
@@ -388,10 +424,24 @@ async function syncPublicPlayers() {
   }
 }
 
-async function syncVoteStatus() {
-  if (!session.value?.playerId) return;
+async function syncClues(revealedIds = []) {
   try {
-    const status = await getVoteStatus(roomId.value, session.value.playerId);
+    const added = await clueStore.refresh(roomId.value, playerId.value, revealedIds);
+    if (!added.length) return;
+    const first = clueStore.clueOf(added[0]);
+    flashToast(
+      first?.visibility === "public" ? "公开线索已同步全员" : "新线索只进你的墙",
+      added.join("、"),
+    );
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
+
+async function syncVoteStatus() {
+  if (!playerId.value) return;
+  try {
+    const status = await getVoteStatus(roomId.value, playerId.value);
     voteStatus.value = status;
     if (status.suspect_id) selectedSuspectId.value = status.suspect_id;
   } catch (error) {
@@ -403,9 +453,9 @@ async function syncVoteStatus() {
 }
 
 async function syncPeerReview() {
-  if (!session.value?.playerId || gameState.value?.stage_id !== "ending") return;
+  if (!playerId.value || gameState.value?.stage_id !== "ending") return;
   try {
-    const status = await getPeerReviewStatus(roomId.value, session.value.playerId);
+    const status = await getPeerReviewStatus(roomId.value, playerId.value);
     peerReview.value = status;
     selectedBestSpeakerId.value = status.best_speaker_id || selectedBestSpeakerId.value;
     selectedBestReasonerId.value = status.best_reasoner_id || selectedBestReasonerId.value;
@@ -426,7 +476,7 @@ async function submitPeerReviewVotes() {
   try {
     await submitPeerReview(
       roomId.value,
-      session.value.playerId,
+      playerId.value,
       selectedBestSpeakerId.value,
       selectedBestReasonerId.value,
     );
@@ -451,7 +501,7 @@ async function submitVote() {
   try {
     const result = await castVote(
       roomId.value,
-      session.value.playerId,
+      playerId.value,
       selectedSuspectId.value,
     );
     voteStatus.value = {
@@ -482,8 +532,8 @@ function updateRemainingTime() {
 }
 
 async function loadGame() {
-  if (!session.value?.playerId) {
-    errorMessage.value = "This browser has no player identity for the room. Please join from the lobby first.";
+  if (!playerId.value) {
+    errorMessage.value = "这个浏览器没有本房间的玩家身份，请先从大厅加入房间。";
     loading.value = false;
     return;
   }
@@ -497,27 +547,29 @@ async function loadGame() {
       return;
     }
 
-    const [playerData, characterData, clueData, stateData, messageData] =
-      await Promise.all([
-        getRoomPlayers(roomId.value),
-        getMyCharacter(roomId.value, session.value.playerId),
-        getMyClues(roomId.value, session.value.playerId),
-        getGameState(roomId.value),
-        getMessages(roomId.value, session.value.playerId),
-      ]);
+    const [playerData, characterData, stateData, messageData] = await Promise.all([
+      getRoomPlayers(roomId.value),
+      getMyCharacter(roomId.value, playerId.value),
+      getGameState(roomId.value),
+      getMessages(roomId.value, playerId.value),
+    ]);
 
     room.value = roomData;
     players.value = playerData;
     character.value = characterData;
-    clues.value = clueData;
     applyGameState(stateData);
     speakStagePrompt(stateData);
     updateRemainingTime();
     messages.value = messageData;
     updateStageAnnouncementPending();
+    await clueStore.refresh(roomId.value, playerId.value);
+    if (canInvestigate.value) {
+      await investigationStore.loadLocations(roomId.value, playerId.value);
+    }
     if (stateData.stage_id === "voting" || stateData.stage_id === "ending") {
       await syncVoteStatus();
     }
+    if (stateData.stage_id === "ending") await syncPeerReview();
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
@@ -566,29 +618,22 @@ function updateSpeakingPlayer(playerId, speaking) {
 
 function getPlayerVoiceStatus(player) {
   if (speakingPlayerIds.value.includes(player.id)) {
-    return { label: "Speaking now", tone: "speaking" };
+    return { label: "发言中", tone: "live" };
   }
-  if (player.id === session.value?.playerId) {
-    if (voiceState.value === "requesting") {
-      return { label: "Preparing voice", tone: "connecting" };
-    }
-    if (!voiceEnabled.value) {
-      return { label: "Voice unavailable", tone: "offline" };
-    }
+  if (player.id === playerId.value) {
+    if (!voiceEnabled.value) return { label: "语音未开", tone: "mute" };
     return muted.value
-      ? { label: "Muted", tone: "muted" }
-      : { label: "Microphone on", tone: "active" };
+      ? { label: "已静音", tone: "mute" }
+      : { label: "麦克风开启", tone: "live" };
   }
 
-  const peer = Object.values(voicePeers.value).find(
-    (item) => item.id === player.id,
-  );
+  const peer = Object.values(voicePeers.value).find((item) => item.id === player.id);
   if (!peer || peer.connectionState === "offline") {
-    return { label: "Voice disconnected", tone: "offline" };
+    return { label: "语音离线", tone: "mute" };
   }
   return peer.muted
-    ? { label: "Muted", tone: "muted" }
-    : { label: "Microphone on", tone: "active" };
+    ? { label: "已静音", tone: "mute" }
+    : { label: "麦克风开启", tone: "live" };
 }
 
 function publishVoiceState() {
@@ -599,18 +644,18 @@ function publishVoiceState() {
 }
 
 async function connectRoom() {
-  if (!session.value?.playerId) return;
+  if (!playerId.value) return;
 
   roomSocket = new RoomWebSocket({
     roomId: roomId.value,
-    playerId: session.value.playerId,
+    playerId: playerId.value,
   });
 
   muted.value = true;
   voiceState.value = "requesting";
   voiceClient = new WebRTCVoiceClient({
     websocket: roomSocket,
-    playerId: session.value.playerId,
+    playerId: playerId.value,
     onRemoteStream: attachRemoteStream,
     onSpeakingChange: updateSpeakingPlayer,
     onPeerState: (playerId, state) => {
@@ -664,13 +709,16 @@ async function connectRoom() {
         await syncGameState();
         if (gameState.value?.stage_id === "voting" && gameState.value.vote_open) {
           voteOpen.value = true;
-          activeCaseTab.value = "clues";
           await syncVoteStatus();
         }
       }
       if (event.message?.clue_ids?.length) {
-        clues.value = await getMyClues(roomId.value, session.value.playerId);
+        await syncClues(event.message.clue_ids);
       }
+    }
+    // 公开线索已经写进每个玩家的线索墙，这里只让客户端重新拉取。
+    if (event.type === "CLUE_WALL_UPDATED") {
+      await syncClues(event.clue_id ? [event.clue_id] : []);
     }
     if (event.type === "ERROR") {
       awaitingHost.value = false;
@@ -681,6 +729,9 @@ async function connectRoom() {
       speakStagePrompt(event.game);
       stageAnnouncementPending.value = true;
       updateRemainingTime();
+      if (event.game?.stage_id === "investigation") {
+        await investigationStore.loadLocations(roomId.value, playerId.value);
+      }
       if (event.game?.stage_id === "voting") {
         await syncVoteStatus();
       }
@@ -689,7 +740,6 @@ async function connectRoom() {
       applyGameState(event.game || gameState.value);
       voteOpen.value = true;
       if (gameState.value) gameState.value.vote_open = true;
-      activeCaseTab.value = "clues";
       stageAnnouncementPending.value = false;
       await syncVoteStatus();
     }
@@ -748,7 +798,7 @@ async function connectRoom() {
       try {
         await voiceClient.handleSignalMessage(event);
       } catch (error) {
-        errorMessage.value = `Voice connection failed: ${error.message}`;
+        errorMessage.value = `语音连接失败：${error.message}`;
       }
     }
   });
@@ -762,13 +812,73 @@ async function connectRoom() {
   } catch (error) {
     voiceEnabled.value = false;
     voiceState.value = "unavailable";
-    errorMessage.value = `The browser could not connect to voice: ${error.message}`;
+    errorMessage.value = `浏览器无法连接语音：${error.message}`;
   }
+}
+
+function armSentence(sentence, action = null) {
+  messageText.value = sentence;
+  pendingAction.value = action;
+  nextTick(() => composerInput.value?.focus());
+}
+
+function armEnterLocation(location) {
+  if (!canInvestigate.value) return;
+  armSentence(`我想进入${location.name_zh}看看。`, {
+    kind: "enter",
+    locationId: location.id,
+  });
+}
+
+function armInspectObject(location, object) {
+  if (!canInvestigate.value) return;
+  armSentence(`我想检查${object.name_zh}。`, {
+    kind: "inspect",
+    locationId: location.id,
+    objectId: object.id,
+    objectName: object.name_zh,
+  });
+}
+
+async function runArmedAction(action) {
+  if (action.kind === "enter") {
+    await investigationStore.enter(roomId.value, playerId.value, action.locationId);
+    return;
+  }
+  await investigationStore.inspect(
+    roomId.value,
+    playerId.value,
+    action.locationId,
+    action.objectId,
+    action.objectName,
+  );
 }
 
 async function sendMessage() {
   const content = messageText.value.trim();
-  if (!content || sending.value || connectionState.value !== "online") return;
+  if (!content || sending.value) return;
+
+  const action = pendingAction.value;
+  if (action) {
+    sending.value = true;
+    errorMessage.value = "";
+    pendingAction.value = null;
+    messageText.value = "";
+    addLocalPlayerMessage(content);
+    try {
+      await runArmedAction(action);
+    } catch (error) {
+      errorMessage.value = error.message;
+    } finally {
+      sending.value = false;
+    }
+    return;
+  }
+
+  if (connectionState.value !== "online") {
+    errorMessage.value = "连接尚未恢复，请稍后再试。";
+    return;
+  }
 
   sending.value = true;
   errorMessage.value = "";
@@ -797,7 +907,7 @@ async function toggleMuted() {
       publishVoiceState();
     } catch (error) {
       voiceState.value = "unavailable";
-      errorMessage.value = `The browser could not connect to voice: ${error.message}`;
+      errorMessage.value = `浏览器无法连接语音：${error.message}`;
     }
     return;
   }
@@ -815,12 +925,12 @@ async function toggleMuted() {
 }
 
 async function leaveRoom() {
-  if (!session.value?.playerId || !canExitRoom.value) return;
+  if (!playerId.value || !canExitRoom.value) return;
 
   errorMessage.value = "";
   try {
     if (room.value?.status === "waiting" || room.value?.status === "ended") {
-      await requestExitRoom(roomId.value, session.value.playerId);
+      await requestExitRoom(roomId.value, playerId.value);
     }
     roomSocket?.close();
     voiceClient?.close();
@@ -839,11 +949,43 @@ function formatMessageTime(value) {
   }).format(new Date(value));
 }
 
+function toggleClueExpand(clueId) {
+  expandedClueIds.value = expandedClueIds.value.includes(clueId)
+    ? expandedClueIds.value.filter((id) => id !== clueId)
+    : [...expandedClueIds.value, clueId];
+}
+
+function isClueClamped(clue) {
+  return clueStore.clueBody(clue).length > 96 && !expandedClueIds.value.includes(clue.id);
+}
+
+function openClueViewer(clue) {
+  openedClue.value = clue;
+}
+
+function closeClueViewer() {
+  openedClue.value = null;
+}
+
+function handleEscape(event) {
+  if (event.key === "Escape") closeClueViewer();
+}
+
+watch(
+  () => gameState.value?.stage_id,
+  async (stageId, previousStageId) => {
+    if (stageId === "investigation" && previousStageId !== "investigation") {
+      await investigationStore.loadLocations(roomId.value, playerId.value);
+    }
+  },
+);
+
 onMounted(async () => {
   window.addEventListener("pointerdown", retryPendingStageSpeech, { passive: true });
   window.addEventListener("pointerdown", resumeVoiceAudio, { passive: true });
+  window.addEventListener("keydown", handleEscape);
   await loadGame();
-  if (!session.value?.playerId || !room.value) return;
+  if (!playerId.value || !room.value) return;
 
   connectRoom();
   clockTimer = window.setInterval(() => {
@@ -860,413 +1002,236 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener("pointerdown", retryPendingStageSpeech);
   window.removeEventListener("pointerdown", resumeVoiceAudio);
+  window.removeEventListener("keydown", handleEscape);
   roomSocket?.close();
   voiceClient?.close();
   if (clockTimer) window.clearInterval(clockTimer);
   if (stateSyncTimer) window.clearInterval(stateSyncTimer);
+  if (toastTimer) window.clearTimeout(toastTimer);
+  investigationStore.reset();
+  clueStore.reset();
 });
 </script>
 
 <template>
-  <div class="app-shell">
-    <AppHeader>
-      <template #center>
-        <div class="game-stage-bar">
-          <span>{{ stageName }}</span>
-          <strong><Clock3 :size="16" />{{ formattedTime }}</strong>
-        </div>
-      </template>
-      <template #actions>
-        <div class="game-header-actions">
-          <button
-            class="voice-button"
-            :class="{ active: voiceEnabled && !muted }"
-            type="button"
-            :disabled="voiceState === 'requesting'"
-            :title="!voiceEnabled || muted ? 'Turn microphone on' : 'Mute microphone'"
-            @click="toggleMuted"
-          >
-            <MicOff v-if="!voiceEnabled || muted" :size="14" /><Mic v-else :size="14" />
-            {{ voiceState === "requesting" ? "Connecting voice" : !voiceEnabled ? "Enable microphone" : muted ? "Muted" : "Microphone on" }}
+  <div class="hub" :style="themeVars">
+    <div class="hub-inner">
+      <HubHeader
+        compact
+        :title="`${roomId} · ${scriptName}`"
+        :subtitle="`ROOM ${roomId} · ${stageName}`"
+      >
+        <template #actions>
+          <span class="pill"><span class="dot"></span>{{ connectionLabel }}</span>
+        </template>
+      </HubHeader>
+
+      <div v-if="room" class="stagebar">
+        <span>当前阶段 <b class="gold">{{ stageName }}</b></span>
+        <span>剩余 <span class="clock">{{ formattedTime }}</span></span>
+        <span>线索 <b class="gold">{{ clueStore.count }}</b> 条</span>
+        <div class="right">
+          <button class="btn-ghost" type="button" @click="toggleMuted">
+            <MicOff v-if="!voiceEnabled || muted" :size="13" />
+            <Mic v-else :size="13" />
+            {{ !voiceEnabled ? "开启麦克风" : muted ? "已静音" : "麦克风开启" }}
           </button>
-          <button
-            v-if="canExitRoom"
-            class="exit-room-button"
-            type="button"
-            title="Leave the room and return to the lobby"
-            @click="leaveRoom"
-          >
-            <LogOut :size="14" />Leave Room
+          <span class="pill">语音 · {{ onlineVoiceCount }} 人在场</span>
+          <button v-if="canExitRoom" class="btn-ghost" type="button" @click="leaveRoom">
+            <LogOut :size="13" />离开房间
           </button>
-          <span class="connection-pill" :class="connectionState">
-            <Wifi v-if="connectionState === 'online'" :size="14" /><WifiOff v-else :size="14" />
-            {{ connectionState === "online" ? "Connected" : "Reconnecting" }}
-          </span>
         </div>
-      </template>
-    </AppHeader>
+      </div>
 
-    <main v-if="loading" class="page-loader">
-      <span></span><p>Preparing your character dossier…</p>
-    </main>
+      <p v-if="errorMessage" class="alert" style="margin: 14px 26px 0">{{ errorMessage }}</p>
 
-    <main v-else-if="!room" class="fatal-state">
-      <strong>!</strong><h1>Unable to Enter the Game</h1>
-      <p>{{ errorMessage }}</p>
-      <RouterLink class="button button-primary" to="/">Return to the Lobby</RouterLink>
-    </main>
+      <main v-if="loading" class="loader"><i></i></main>
 
-    <main v-else class="game-main">
-      <section class="game-command-bar">
-        <div><span class="overline">ROOM</span><strong>{{ roomId }} · {{ script?.title || room.script_id }}</strong></div>
-        <div class="stage-status"><Radio :size="15" /><span>CURRENT STAGE</span><strong>{{ stageName }}</strong></div>
-        <span class="voice-summary"><Users :size="14" />{{ onlineVoiceCount }} online</span>
-      </section>
+      <main v-else-if="!room" class="card" style="margin: 22px 26px; padding: 26px">
+        <p class="overline">无法进入房间</p>
+        <h3 style="font-family: var(--serif); margin: 6px 0 12px">{{ errorMessage || "房间不存在" }}</h3>
+        <RouterLink class="btn-main" style="display: inline-block" to="/">返回剧本大厅</RouterLink>
+      </main>
 
-      <div v-if="errorMessage" class="inline-alert wide-alert">{{ errorMessage }}</div>
-
-      <section class="game-workspace">
-        <aside class="character-rail">
-          <article class="character-sheet">
-            <div class="character-portrait">
+      <main v-else class="game">
+        <aside class="pane char">
+          <div class="char-hero">
+            <div class="ava">
               <img v-if="characterAvatarUrl" :src="characterAvatarUrl" :alt="character?.name" />
-              <span v-else>{{ character?.name?.slice(0, 1) || "?" }}</span>
+              <template v-else>{{ character?.name?.slice(0, 1) || "?" }}</template>
             </div>
-            <span class="overline">YOUR ROLE</span>
-            <div class="player-identity">
-              <span>PLAYER NAME</span>
-              <strong>{{ session?.playerName || myPublicPlayer?.name || "Unnamed Player" }}</strong>
-            </div>
-            <h1>{{ character?.name || myPublicPlayer?.character_name || "Unassigned" }}</h1>
-            <p v-if="character?.tagline" class="character-tagline">{{ character.tagline }}</p>
-            <span class="character-section-label">YOUR IDENTITY</span>
+            <h3>{{ character?.name || myPublicPlayer?.character_name || "尚未分配角色" }}</h3>
+            <p>玩家 {{ session?.playerName || "匿名" }} · 你的角色</p>
+          </div>
+
+          <div class="blk">
+            <h4>Public Identity · 公开身份</h4>
             <p>
               <AnnotatedText
-                :text="character?.public_profile || 'No public profile available.'"
+                :text="character?.public_profile || '暂无公开身份。'"
                 :vocabulary="characterVocabulary"
               />
             </p>
-            <span class="private-label"><KeyRound :size="13" />私信 — 只有你能看到</span>
+            <p v-if="character?.tagline" style="margin-top: 8px; color: var(--acc-soft)">
+              {{ character.tagline }}
+            </p>
+          </div>
 
-            <section v-if="character?.case_background" class="character-block">
-              <h2>案件信息</h2>
-              <p>
-                <AnnotatedText :text="character.case_background" :vocabulary="characterVocabulary" />
-              </p>
-            </section>
-            <section v-if="character?.case_details?.length" class="character-block">
-              <h2>Case Details</h2>
-              <dl class="case-details-list">
-                <div v-for="detail in character.case_details" :key="detail.label">
-                  <dt>{{ detail.label }}</dt>
-                  <dd><AnnotatedText :text="detail.value" :vocabulary="characterVocabulary" /></dd>
-                </div>
-              </dl>
-            </section>
-            <section v-if="character?.core_rules?.length" class="character-block">
-              <h2>Core Rules</h2>
-              <ul>
-                <li v-for="rule in character.core_rules" :key="rule">{{ rule }}</li>
-              </ul>
-            </section>
-            <section v-if="character?.private_background" class="character-block">
-              <h2>Private Background</h2>
-              <p>
+          <div v-if="character?.case_background" class="blk">
+            <h4>Case · 案件信息</h4>
+            <p><AnnotatedText :text="character.case_background" :vocabulary="characterVocabulary" /></p>
+          </div>
+
+          <div class="blk priv">
+            <h4>Private · 仅你可见</h4>
+            <ul>
+              <li v-for="secret in character?.secrets || []" :key="secret">
+                <AnnotatedText :text="secret" :vocabulary="characterVocabulary" />
+              </li>
+              <li v-for="information in character?.initial_information || []" :key="information">
+                <AnnotatedText :text="information" :vocabulary="characterVocabulary" />
+              </li>
+            </ul>
+            <p v-if="character?.private_background">
+              <AnnotatedText :text="character.private_background" :vocabulary="characterVocabulary" />
+            </p>
+            <p
+              v-if="!character?.secrets?.length && !character?.initial_information?.length && !character?.private_background"
+            >角色卡没有额外私密内容。</p>
+          </div>
+
+          <div v-if="character?.goals?.length" class="blk">
+            <h4>Goals · 目标</h4>
+            <ul>
+              <li v-for="goal in character.goals" :key="goal">
+                <AnnotatedText :text="goal" :vocabulary="characterVocabulary" />
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="character?.relationships?.length" class="blk">
+            <h4>Relationships · 关系</h4>
+            <ul>
+              <li
+                v-for="relationship in character.relationships"
+                :key="relationship.character_id || relationship.name"
+              >
+                <strong style="color: var(--paper)">{{ getRelationshipName(relationship) }}</strong>
+                <span v-if="relationship.description"> — </span>
                 <AnnotatedText
-                  :text="character?.private_background || 'No information available.'"
+                  v-if="relationship.description"
+                  :text="relationship.description"
                   :vocabulary="characterVocabulary"
                 />
-              </p>
-            </section>
-            <section class="character-block">
-              <h2>Public Goal</h2>
-              <ul>
-                <li v-for="goal in character?.goals || []" :key="goal">
-                  <AnnotatedText :text="goal" :vocabulary="characterVocabulary" />
-                </li>
-              </ul>
-            </section>
-            <section class="character-block">
-              <h2>Secret Missions</h2>
-              <ul>
-                <li v-for="secret in character?.secrets || []" :key="secret">
-                  <AnnotatedText :text="secret" :vocabulary="characterVocabulary" />
-                </li>
-              </ul>
-            </section>
-            <section v-if="character?.story?.length" class="character-block">
-              <h2>Your Story</h2>
-              <ol class="character-story">
-                <li v-for="paragraph in character.story" :key="paragraph">
-                  <AnnotatedText :text="paragraph" :vocabulary="characterVocabulary" />
-                </li>
-              </ol>
-            </section>
-            <section v-if="character?.initial_information?.length" class="character-block">
-              <h2>What You Know</h2>
-              <ul>
-                <li v-for="information in character.initial_information" :key="information">
-                  <AnnotatedText :text="information" :vocabulary="characterVocabulary" />
-                </li>
-              </ul>
-            </section>
-            <section v-if="character?.relationships?.length" class="character-block">
-              <h2>Relationships</h2>
-              <ul>
-                <li v-for="relationship in character.relationships" :key="relationship.character_id || relationship.name">
-                  <strong>{{ getRelationshipName(relationship) }}</strong>
-                  <span v-if="relationship.description"> — </span>
-                  <AnnotatedText
-                    v-if="relationship.description"
-                    :text="relationship.description"
-                    :vocabulary="characterVocabulary"
-                  />
-                </li>
-              </ul>
-            </section>
-          </article>
+              </li>
+            </ul>
+          </div>
 
-          <section class="cast-list">
-            <h2 class="rail-title"><Users :size="15" />Public Cast</h2>
+          <div v-if="character?.story?.length" class="blk">
+            <h4>Story · 你的经历</h4>
+            <ul>
+              <li v-for="paragraph in character.story" :key="paragraph">
+                <AnnotatedText :text="paragraph" :vocabulary="characterVocabulary" />
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="character?.core_rules?.length" class="blk">
+            <h4>Rules · 本局规则</h4>
+            <ul>
+              <li v-for="rule in character.core_rules" :key="rule">{{ rule }}</li>
+            </ul>
+          </div>
+
+          <div class="blk" style="padding: 0">
+            <h4 style="padding: 13px 15px 0">Cast · 在场玩家</h4>
             <div
               v-for="(player, index) in players"
               :key="player.id || `${player.name}-${index}`"
-              class="cast-item"
-              :class="{ speaking: speakingPlayerIds.includes(player.id) }"
+              class="cast"
             >
-              <span class="cast-avatar">
+              <span class="ava">
                 <img
                   v-if="getPlayerAvatarUrl(player)"
                   :src="getPlayerAvatarUrl(player)"
                   :alt="player.character_name || player.name"
                 />
                 <template v-else>{{ getPlayerAvatarInitial(player) }}</template>
-                <i v-if="speakingPlayerIds.includes(player.id)" class="cast-speaking-ring"></i>
               </span>
-              <div>
-                <strong>{{ player.name }} <em v-if="speakingPlayerIds.includes(player.id)" class="cast-speaking-badge"><Mic :size="11" />SPEAKING</em></strong>
-                <small>{{ player.character_name || "Role not revealed" }}</small>
-                <small class="voice-presence" :class="getPlayerVoiceStatus(player).tone">
-                  <i></i>{{ getPlayerVoiceStatus(player).label }}
-                </small>
-              </div>
+              {{ player.name }} · {{ player.character_name || "角色未公开" }}
+              <small class="say" :class="getPlayerVoiceStatus(player).tone">
+                {{ getPlayerVoiceStatus(player).label }}
+              </small>
             </div>
-          </section>
+          </div>
         </aside>
 
-        <section class="dm-console">
-          <header class="console-header meeting-console-header">
-            <div class="meeting-host-card">
-              <span class="dm-avatar">
-                <img v-if="hostAvatarUrl" :src="hostAvatarUrl" alt="AI Host" />
-                <Bot v-else :size="28" />
-              </span>
-              <div>
-                <small>AI GAME HOST</small>
-                <strong>{{ script?.agent_profile?.display_name || "AI Host" }}</strong>
-                <span><i></i>HOSTING · {{ stageName }}</span>
-              </div>
+        <section class="pane chat">
+          <div class="dm-head">
+            <div class="ava">
+              <img v-if="hostAvatarUrl" :src="hostAvatarUrl" :alt="hostName" />
+              <template v-else>幕</template>
+            </div>
+            <div style="flex: 1">
+              <b>{{ hostName }}</b>
+              <span>● 主持中 · {{ stageName }}</span>
+            </div>
+            <span class="pill" style="font-size: 10.5px">AI DM</span>
+          </div>
+
+          <div class="speak">
+            <span class="dot" style="width: 7px; height: 7px"></span>
+            当前发言者
+            <b>{{ currentSpeakingPlayer
+              ? `${currentSpeakingPlayer.name} · ${currentSpeakingPlayer.character_name || "角色未公开"}`
+              : "等待玩家发言" }}</b>
+            <span v-if="currentSpeakingPlayer" style="margin-left: auto; color: var(--faint)">
+              第 {{ speakingPosition }} / {{ players.length }} 位
+            </span>
+          </div>
+
+          <div class="mission"><b>{{ stageName }}</b>{{ currentStageTask }}</div>
+
+          <div ref="messageList" class="msgs">
+            <div v-if="stageAnnouncementPending" class="msg sys">
+              <div class="who">STAGE</div>
+              <div class="bub">进入{{ stageName }}。{{ gameState?.stage_description || "阶段已经切换。" }}主持人正在宣布本阶段安排。</div>
             </div>
 
-            <div class="meeting-speaker-slot" :class="{ active: currentSpeakingPlayer }" aria-live="polite">
-              <template v-if="currentSpeakingPlayer">
-                <div class="meeting-speaker-portrait">
-                  <img
-                    v-if="getPlayerAvatarUrl(currentSpeakingPlayer)"
-                    :src="getPlayerAvatarUrl(currentSpeakingPlayer)"
-                    :alt="currentSpeakingPlayer.character_name || currentSpeakingPlayer.name"
-                  />
-                  <span v-else>{{ getPlayerAvatarInitial(currentSpeakingPlayer) }}</span>
-                </div>
-                <div class="meeting-speaker-copy">
-                  <span class="meeting-live-label"><Mic :size="13" />SPEAKING NOW</span>
-                  <strong>{{ currentSpeakingPlayer.character_name || "Unrevealed Role" }}</strong>
-                  <small>{{ currentSpeakingPlayer.name }}</small>
-                </div>
-              </template>
-              <template v-else>
-                <div class="meeting-speaker-empty-icon"><MicOff :size="23" /></div>
-                <div class="meeting-speaker-copy">
-                  <span class="meeting-live-label idle">CURRENT SPEAKER</span>
-                  <strong>等待玩家发言</strong>
-                  <small>正在发言的角色卡会显示在这里。</small>
-                </div>
-              </template>
-            </div>
-          </header>
-
-          <section class="stage-mission" aria-live="polite">
-            <span>NOW PLAYING</span>
-            <h2>{{ stageName }}</h2>
-            <p>{{ currentStageTask }}</p>
-          </section>
-
-          <div ref="messageList" class="message-list">
-            <div v-if="stageAnnouncementPending" class="stage-transition-notice">
-              <Radio :size="18" />
-              <div>
-                <strong>进入{{ stageName }}</strong>
-                <span>{{ gameState?.stage_description || "阶段已经切换。" }} 主持人正在宣布本阶段安排。</span>
-              </div>
-            </div>
-
-            <div v-if="!messages.length && !stageAnnouncementPending" class="message-empty">
-              <Bot :size="26" /><strong>主持人正在准备。</strong><span>你可以询问角色信息，或向主持人提交推理。</span>
+            <div v-if="!messages.length && !stageAnnouncementPending" class="empty">
+              <strong>主持人正在准备。</strong>
+              <span>你可以询问角色信息，或向主持人提交推理。</span>
             </div>
 
             <article
               v-for="message in messages"
               :key="message.id"
-              class="message-item"
-              :class="{
-                player: message.type === 'PLAYER_PRIVATE_MESSAGE',
-                public: message.channel === 'PUBLIC_MESSAGE',
-              }"
-              >
-                <div class="message-meta">
-                  <span>{{ message.type === "PLAYER_PRIVATE_MESSAGE" ? "你" : script?.agent_profile?.display_name || "主持人" }}</span>
-                <small :class="message.channel === 'PUBLIC_MESSAGE' ? 'public-tag' : 'private-tag'">
-                  {{ message.channel === "PUBLIC_MESSAGE" ? "公开" : "私信" }}
-                </small>
-                </div>
-                <p>{{ message.content }}</p>
-                <div v-if="message.clue_ids?.length" class="message-clue-cards">
-                  <img
-                    v-for="clueId in message.clue_ids"
-                    :key="`${message.id}-${clueId}`"
-                    :src="getClueAssetUrl({ id: clueId })"
-                    alt="Clue card"
-                  />
-                </div>
-              </article>
+              class="msg"
+              :class="messageKind(message)"
+            >
+              <div class="who">{{ messageWho(message) }} · {{ formatMessageTime(message.created_at) }}</div>
+              <div class="bub">{{ message.content }}<br v-if="message.clue_ids?.length" /><span
+                v-for="clueId in message.clue_ids"
+                :key="`${message.id}-${clueId}`"
+                class="chip-clue"
+              >{{ clueChipLabel(clueId) }}</span></div>
+            </article>
 
-            <div v-if="awaitingHost" class="dm-thinking" aria-label="主持人正在回复">
-              主持人正在回复<span></span><span></span><span></span>
-            </div>
-
-            <section v-if="endingData" class="ending-panel" aria-live="polite">
-              <div class="ending-panel-heading">
-                <div>
-                  <span class="overline">最终复盘</span>
-                  <h2>真相与最终结局</h2>
-                </div>
-                <ShieldAlert :size="20" />
-              </div>
-
-              <section class="ending-section ending-vote-result">
-                <span class="overline">1 · VOTE RESULT</span>
-                <h3>最终选择</h3>
-                <p v-if="endingData.suspect_name">本局票数最高的选择是 <strong>{{ endingData.suspect_name }}</strong>。</p>
-                <p v-else>本次投票没有形成唯一的最高选择。</p>
-                <div v-if="endingVoteRows.length" class="ending-vote-table">
-                  <div v-for="row in endingVoteRows" :key="row.characterId" class="ending-vote-row">
-                    <span>{{ row.characterName }}</span><strong>{{ row.count }} 票</strong>
-                  </div>
-                </div>
-              </section>
-
-              <section class="ending-section">
-                <span class="overline">2 · 最终结局</span>
-                <h3>{{ endingData.title || '最终结局' }}</h3>
-                <p class="ending-narrative">{{ endingStory }}</p>
-                <p v-if="endingData.winner_name" class="ending-winner">最终结果：<strong>{{ endingData.winner_name }}</strong></p>
-              </section>
-
-              <section class="ending-section">
-                <span class="overline">3 · WHAT REALLY HAPPENED</span>
-                <h3>事情究竟是怎样发生的</h3>
-                <ol v-if="endingTruth.length" class="ending-truth-list">
-                  <li v-for="truth in endingTruth" :key="truth">{{ truth }}</li>
-                </ol>
-                <p v-else>主持人暂时无法提供这次选择对应的真相还原。</p>
-              </section>
-
-              <section v-if="endingFates.length" class="ending-section">
-                <span class="overline">4 · CASE REVIEW</span>
-                <h3>每位角色最后的命运</h3>
-                <div class="ending-fate-list">
-                  <article v-for="fate in endingFates" :key="fate.character_id" class="ending-fate-item">
-                    <strong>{{ fate.character_name }}</strong><p>{{ fate.fate }}</p>
-                  </article>
-                </div>
-              </section>
-            </section>
-
-            <section v-if="endingData" class="peer-review-panel" aria-labelledby="peer-review-title">
-              <div class="peer-review-heading">
-                <div><span class="overline">PEER REVIEW</span><h2 id="peer-review-title">Recognize Your Fellow Players</h2></div>
-                <Users :size="20" />
-              </div>
-
-              <template v-if="!peerReview.has_submitted">
-                <p class="peer-review-help">每个奖项选择一名玩家。不能投给自己，提交后不能修改。</p>
-                <div class="peer-review-fields">
-                  <label>
-                    <span>最佳发言者</span>
-                    <small>发言积极、表达清晰、容易理解。</small>
-                    <select v-model="selectedBestSpeakerId">
-                      <option value="" disabled>请选择玩家</option>
-                      <option v-for="candidate in peerReview.candidates" :key="`speaker-${candidate.player_id}`" :value="candidate.player_id">
-                        {{ candidate.player_name }} · {{ candidate.character_name || '未知角色' }}
-                      </option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>最佳推理者</span>
-                    <small>推理准确，能够充分使用线索。</small>
-                    <select v-model="selectedBestReasonerId">
-                      <option value="" disabled>请选择玩家</option>
-                      <option v-for="candidate in peerReview.candidates" :key="`reasoner-${candidate.player_id}`" :value="candidate.player_id">
-                        {{ candidate.player_name }} · {{ candidate.character_name || '未知角色' }}
-                      </option>
-                    </select>
-                  </label>
-                </div>
-                <button
-                  class="peer-review-submit"
-                  type="button"
-                  :disabled="!selectedBestSpeakerId || !selectedBestReasonerId || submittingPeerReview"
-                  @click="submitPeerReviewVotes"
-                >{{ submittingPeerReview ? '提交中…' : '提交互评' }}</button>
-              </template>
-
-              <div v-else-if="!peerReview.results_revealed" class="peer-review-waiting">
-                <CheckCircle2 :size="20" />
-                <div><strong>你的互评已记录。</strong><span>等待其他玩家完成：{{ peerReview.submitted_count }} / {{ peerReview.required_count }}</span></div>
-              </div>
-
-              <div v-else class="peer-review-results">
-                <article>
-                  <span>最佳发言者</span>
-                  <h3>{{ peerReview.best_speakers.map((item) => item.player_name).join(' & ') }}</h3>
-                  <p>{{ peerReview.best_speakers.map((item) => `${item.votes} 票`).join('、') }}</p>
-                </article>
-                <article>
-                  <span>最佳推理者</span>
-                  <h3>{{ peerReview.best_reasoners.map((item) => item.player_name).join(' & ') }}</h3>
-                  <p>{{ peerReview.best_reasoners.map((item) => `${item.votes} 票`).join('、') }}</p>
-                </article>
-              </div>
-            </section>
+            <div v-if="awaitingHost" class="thinking">主持人正在回复<i></i><i></i><i></i></div>
 
             <section
               v-if="gameState?.stage_id === 'voting' && (voteOpen || gameState?.vote_open)"
-              class="vote-panel vote-panel-chat"
+              class="panel"
             >
-              <div class="vote-panel-heading">
-                <div>
-                  <span class="overline">最终投票</span>
-                  <h2>选择你的最终判断</h2>
-                </div>
-                <ShieldAlert :size="18" />
-              </div>
-              <p class="vote-help">请选择你认为最合理的最终答案。每名玩家只能投票一次。</p>
-              <div class="vote-options">
+              <p class="overline" style="margin: 0">最终投票</p>
+              <h3>选择你的最终判断</h3>
+              <p class="help">请选择你认为最合理的最终答案。每名玩家只能投票一次。</p>
+              <div class="opts">
                 <label
                   v-for="candidate in voteStatus.candidates"
                   :key="candidate.suspect_id"
-                  class="vote-option"
-                  :class="{ selected: selectedSuspectId === candidate.suspect_id }"
+                  class="opt"
+                  :class="{ sel: selectedSuspectId === candidate.suspect_id }"
                 >
                   <input
                     v-model="selectedSuspectId"
@@ -1275,177 +1240,392 @@ onBeforeUnmount(() => {
                     :value="candidate.suspect_id"
                     :disabled="voteStatus.has_voted || submittingVote"
                   />
-                  <span class="vote-option-avatar">
+                  <span class="ava">
                     <img
                       v-if="roomStore.getAssetUrl(script, candidate.avatar)"
                       :src="roomStore.getAssetUrl(script, candidate.avatar)"
                       :alt="candidate.character_name || candidate.player_name"
                     />
-                    <span v-else>{{ (candidate.character_name || candidate.player_name || '?').slice(0, 1) }}</span>
+                    <template v-else>{{ (candidate.character_name || candidate.player_name || "?").slice(0, 1) }}</template>
                   </span>
-                  <span class="vote-option-copy">
-                    <strong>{{ candidate.character_name || '未命名角色' }}</strong>
-                    <small>{{ candidate.player_name || '未知玩家' }}</small>
+                  <span class="who">
+                    <b>{{ candidate.character_name || "未命名角色" }}</b>
+                    <span>{{ candidate.player_name || "未知玩家" }}</span>
                   </span>
-                  <CheckCircle2 v-if="selectedSuspectId === candidate.suspect_id" :size="16" />
                 </label>
               </div>
               <button
-                class="vote-submit"
+                class="btn-main"
                 type="button"
                 :disabled="!selectedSuspectId || voteStatus.has_voted || submittingVote || connectionState !== 'online'"
                 @click="submitVote"
+              >{{ voteStatus.has_voted ? "已提交投票" : submittingVote ? "提交中…" : "确认投票" }}</button>
+              <div class="progress-row">
+                <div class="track">
+                  <i :style="{ width: `${Math.min(100, voteStatus.vote_count / Math.max(1, voteStatus.required_votes) * 100)}%` }"></i>
+                </div>
+                <span>{{ voteStatus.vote_count }} / {{ voteStatus.required_votes }}</span>
+                <span v-if="voteStatus.has_voted">你的投票已记录。</span>
+              </div>
+            </section>
+
+            <section v-if="endingData" class="panel">
+              <p class="overline" style="margin: 0">最终复盘</p>
+              <h3>真相与最终结局</h3>
+              <div v-for="row in endingVoteRows" :key="row.characterId" class="row">
+                <span>{{ row.characterName }}</span><b>{{ row.count }} 票</b>
+              </div>
+              <p v-if="endingData.suspect_name" class="help" style="margin-top: 10px">
+                本局票数最高的选择是 {{ endingData.suspect_name }}。
+              </p>
+              <p class="help">{{ endingStory }}</p>
+              <ol
+                v-if="endingTruth.length"
+                class="help"
+                style="padding-left: 18px; margin: 8px 0"
               >
-                {{ voteStatus.has_voted ? '已提交投票' : submittingVote ? '提交中…' : '确认投票' }}
-              </button>
-              <div class="vote-progress">
-                <span>投票 {{ voteStatus.vote_count }} / {{ voteStatus.required_votes }}</span>
-                <span v-if="voteStatus.has_voted" class="vote-done">你的投票已记录。</span>
+                <li v-for="truth in endingTruth" :key="truth">{{ truth }}</li>
+              </ol>
+              <div v-for="fate in endingFates" :key="fate.character_id" class="fate">
+                <b>{{ fate.character_name }}</b>
+                <p>{{ fate.fate }}</p>
+              </div>
+            </section>
+
+            <section v-if="endingData" class="panel" style="margin-top: 12px">
+              <p class="overline" style="margin: 0">Peer Review</p>
+              <h3>给同场玩家一票</h3>
+              <template v-if="!peerReview.has_submitted">
+                <p class="help">每个奖项选择一名玩家。不能投给自己，提交后不能修改。</p>
+                <div class="opts">
+                  <label class="field" style="gap: 6px">
+                    <span>最佳发言者</span>
+                    <select v-model="selectedBestSpeakerId">
+                      <option value="" disabled>请选择玩家</option>
+                      <option
+                        v-for="candidate in peerReview.candidates"
+                        :key="`speaker-${candidate.player_id}`"
+                        :value="candidate.player_id"
+                      >{{ candidate.player_name }} · {{ candidate.character_name || "未知角色" }}</option>
+                    </select>
+                  </label>
+                  <label class="field" style="gap: 6px">
+                    <span>最佳推理者</span>
+                    <select v-model="selectedBestReasonerId">
+                      <option value="" disabled>请选择玩家</option>
+                      <option
+                        v-for="candidate in peerReview.candidates"
+                        :key="`reasoner-${candidate.player_id}`"
+                        :value="candidate.player_id"
+                      >{{ candidate.player_name }} · {{ candidate.character_name || "未知角色" }}</option>
+                    </select>
+                  </label>
+                </div>
+                <button
+                  class="btn-main"
+                  type="button"
+                  :disabled="!selectedBestSpeakerId || !selectedBestReasonerId || submittingPeerReview"
+                  @click="submitPeerReviewVotes"
+                >{{ submittingPeerReview ? "提交中…" : "提交互评" }}</button>
+              </template>
+              <p v-else-if="!peerReview.results_revealed" class="help">
+                你的互评已记录，等待其他玩家完成：{{ peerReview.submitted_count }} / {{ peerReview.required_count }}
+              </p>
+              <div v-else>
+                <div class="row">
+                  <span>最佳发言者</span>
+                  <b>{{ peerReview.best_speakers.map((item) => item.player_name).join(" & ") }}</b>
+                </div>
+                <div class="row">
+                  <span>最佳推理者</span>
+                  <b>{{ peerReview.best_reasoners.map((item) => item.player_name).join(" & ") }}</b>
+                </div>
               </div>
             </section>
           </div>
 
-          <form class="message-composer" @submit.prevent="sendMessage">
-            <KeyRound :size="16" />
-            <label class="sr-only" for="host-message">Private message to the host</label>
-            <textarea
-              id="host-message"
-              v-model="messageText"
-              maxlength="1000"
-              rows="2"
-              placeholder="输入你想对主持人说的话，询问线索或提交推理…"
-              @keydown.enter.exact.prevent="sendMessage"
-            ></textarea>
-            <button type="submit" title="Send" :disabled="!messageText.trim() || connectionState !== 'online'">
-              <Send :size="17" />
-            </button>
-          </form>
+          <div class="composer">
+            <div class="filled">
+              <textarea
+                id="host-message"
+                ref="composerInput"
+                v-model="messageText"
+                maxlength="1000"
+                rows="2"
+                placeholder="输入你想对主持人说的话…"
+                @keydown.enter.exact.prevent="sendMessage"
+              ></textarea>
+              <button
+                class="send"
+                type="button"
+                title="发送"
+                :disabled="!messageText.trim() || sending"
+                @click="sendMessage"
+              ><Send :size="17" /></button>
+            </div>
+            <p class="tip">
+              <template v-if="pendingAction">
+                <b>● 中文已填入</b> · 发送后由后端按地点与物品执行，主持人的描述只回给你
+              </template>
+              <template v-else-if="messageText">
+                <b>● 已填入输入框</b> · 可随意改动 · 按发送才交给后端与 AI 主持人
+              </template>
+              <template v-else>点地点或物品只会把句子填到这里，不发送也不请求后端；自由输入的句子交给 AI 主持人</template>
+            </p>
+          </div>
         </section>
 
-        <aside class="case-rail">
-          <div class="case-tabs" role="tablist" aria-label="Clues, timeline, and suggested phrases">
-            <button
-              :class="{ active: activeCaseTab === 'clues' }"
-              type="button"
-              role="tab"
-              :aria-selected="activeCaseTab === 'clues'"
-              @click="activeCaseTab = 'clues'"
-            >
-              <BookOpen :size="15" />Clues {{ clues.length }}
-            </button>
-            <button
-              :class="{ active: activeCaseTab === 'timeline' }"
-              type="button"
-              role="tab"
-              :aria-selected="activeCaseTab === 'timeline'"
-              @click="activeCaseTab = 'timeline'"
-            >
-              <Clock3 :size="15" />Timeline
-            </button>
-            <button
-              :class="{ active: activeCaseTab === 'phrases' }"
-              type="button"
-              role="tab"
-              :aria-selected="activeCaseTab === 'phrases'"
-              @click="activeCaseTab = 'phrases'"
-            >
-              <FileKey2 :size="15" />语言脚手架
-            </button>
+        <aside class="pane rail">
+          <div class="ws-toast" :class="{ on: wsToast.on }">
+            {{ wsToast.text }}<b v-if="wsToast.clueId"> {{ wsToast.clueId }}</b>
           </div>
 
-          <div v-if="activeCaseTab === 'clues'" class="case-content">
-            <header class="case-heading"><span class="overline">CASE FILE</span><h2>My Clues</h2></header>
-            <article v-for="clue in clues" :key="clue.id" class="clue-item">
-              <img
-                v-if="getClueAssetUrl(clue)"
-                class="clue-image"
-                :src="getClueAssetUrl(clue)"
-                :alt="clue.title"
-                @error="hideBrokenClueImage"
-              />
-              <span>{{ clue.id.replace("clue_", "#") }}</span><h3>{{ clue.title }}</h3><p>{{ clue.content }}</p>
-              <div><small v-for="tag in clue.tags" :key="tag">{{ tag }}</small></div>
-            </article>
-            <div v-if="!clues.length" class="case-empty"><BookOpen :size="25" /><span>Your discovered clues will appear here.</span></div>
+          <div class="seg">
+            <button
+              type="button"
+              :class="{ on: activeRailTab === 'clues' }"
+              @click="activeRailTab = 'clues'"
+            >线索墙<small>{{ clueStore.count }}</small></button>
+            <button
+              type="button"
+              :class="{ on: activeRailTab === 'timeline' }"
+              @click="activeRailTab = 'timeline'"
+            >时间线</button>
+            <button
+              type="button"
+              :class="{ on: activeRailTab === 'search' }"
+              @click="activeRailTab = 'search'"
+            >搜证</button>
+            <button
+              type="button"
+              :class="{ on: activeRailTab === 'speak' }"
+              @click="activeRailTab = 'speak'"
+            >表达</button>
           </div>
 
-          <div v-else-if="activeCaseTab === 'timeline'" class="case-content">
-            <header class="case-heading"><span class="overline">私人时间线</span><h2>我的时间线</h2></header>
-            <ol class="timeline-list">
-              <li v-for="item in character?.timeline || []" :key="`${item.time}-${item.description}`">
-                <time>{{ item.time }}</time>
-                <p>
-                  <span v-if="item.phase" class="timeline-phase">{{ item.phase }}</span>
-                  <AnnotatedText :text="item.description" :vocabulary="characterVocabulary" />
-                </p>
-              </li>
-            </ol>
-            <div v-if="!character?.timeline?.length" class="case-empty"><Clock3 :size="25" /><span>No timeline information is available.</span></div>
-          </div>
-
-          <div v-else class="case-content speaking-notes-content">
-            <header class="case-heading">
-              <span class="overline">LANGUAGE SCAFFOLD</span>
-              <h2>语言脚手架</h2>
-            </header>
-            <div class="scaffold-tabs" role="tablist" aria-label="词汇和句型">
-              <button
-                type="button"
-                role="tab"
-                :class="{ active: activeScaffoldTab === 'vocabulary' }"
-                :aria-selected="activeScaffoldTab === 'vocabulary'"
-                @click="activeScaffoldTab = 'vocabulary'"
-              >词汇</button>
-              <button
-                type="button"
-                role="tab"
-                :class="{ active: activeScaffoldTab === 'sentences' }"
-                :aria-selected="activeScaffoldTab === 'sentences'"
-                @click="activeScaffoldTab = 'sentences'"
-              >句型</button>
-            </div>
-
-            <div v-if="activeScaffoldTab === 'vocabulary'" class="scaffold-groups">
-              <section
-                v-for="group in languageScaffold.vocabulary || []"
-                :key="group.category"
-                class="scaffold-group"
+          <div class="rail-body">
+            <div v-show="activeRailTab === 'clues'" class="tabpane">
+              <p class="hint">公开线索同步全员，私密线索只进你自己的墙。缩略图保持线索卡原比例，点一下看整卡。</p>
+              <div v-if="!clueStore.wall.length" class="empty">
+                <strong>线索墙目前是空的。</strong>
+                <span>它会随你的搜证与推理逐步长出来。</span>
+              </div>
+              <div
+                v-for="clue in clueStore.wall"
+                :key="clue.id"
+                class="clue"
+                :class="{ new: clueStore.newIds.includes(clue.id) }"
               >
-                <h3>{{ group.category }}</h3>
-                <article v-for="item in group.items" :key="item.term" class="scaffold-item">
-                  <strong>{{ item.term }}</strong>
-                  <span>{{ item.meaning }}</span>
-                  <small v-if="item.example">{{ item.example }}</small>
-                </article>
-              </section>
-              <div v-if="!languageScaffold.vocabulary?.length" class="case-empty phrase-empty">
-                <BookOpen :size="25" />
-                <span>该剧本暂未整理词汇。</span>
+                <button class="thumb" type="button" @click="openClueViewer(clue)">
+                  <img
+                    v-if="getClueAssetUrl(clue)"
+                    :src="getClueAssetUrl(clue)"
+                    :alt="`${clueStore.clueTitle(clue)}线索卡`"
+                    @error="hideBrokenClueImage"
+                  />
+                </button>
+                <div class="cc">
+                  <div class="top">
+                    <b>{{ clueStore.clueTitle(clue) }}</b>
+                    <span class="vis" :class="clue.visibility === 'public' ? 'pub' : 'pri'">
+                      {{ clue.visibility === "public" ? "公开" : "私密 · 仅你" }}
+                    </span>
+                  </div>
+                  <small>{{ clue.title }} · {{ clue.id.replace("clue_", "#") }}</small>
+                  <p :class="{ clamp: isClueClamped(clue) }">{{ clueStore.clueBody(clue) }}</p>
+                  <button
+                    v-if="clueStore.clueBody(clue).length > 96"
+                    class="more"
+                    type="button"
+                    @click="toggleClueExpand(clue.id)"
+                  >{{ expandedClueIds.includes(clue.id) ? "收起" : "展开全文" }}</button>
+                </div>
               </div>
             </div>
 
-            <div v-else class="scaffold-groups">
-              <section
-                v-for="group in languageScaffold.sentence_patterns || []"
-                :key="group.category"
-                class="scaffold-group"
+            <div v-show="activeRailTab === 'timeline'" class="tabpane">
+              <p class="hint">时间线来自角色卡，只按你的角色下发。</p>
+              <ul v-if="character?.timeline?.length" class="tl">
+                <li v-for="item in character.timeline" :key="`${item.time}-${item.description}`">
+                  <time>{{ item.time }}</time>
+                  <div>
+                    <span v-if="item.phase" class="ph">{{ item.phase }}</span>
+                    <AnnotatedText :text="item.description" :vocabulary="characterVocabulary" />
+                  </div>
+                </li>
+              </ul>
+              <div v-else class="empty">
+                <strong>这个角色还没有时间线。</strong>
+                <span>可以向主持人询问角色当夜的行踪。</span>
+              </div>
+            </div>
+
+            <div v-show="activeRailTab === 'search'" class="tabpane">
+              <p class="hint">
+                {{ canInvestigate
+                  ? "先点地点，再点物品。点击只会把中文句子填进输入框，不发送、也不请求后端。"
+                  : "搜证只在搜证阶段开放；进入该阶段后这里会列出可以前往的地点。" }}
+              </p>
+              <div v-if="investigationStore.loading" class="empty">
+                <strong>正在读取地点清单…</strong>
+              </div>
+              <div v-else-if="!investigationStore.locations.length" class="empty">
+                <strong>{{ investigationStore.error || "暂时没有可以前往的地点。" }}</strong>
+                <span>阶段切换后会自动重新载入。</span>
+              </div>
+              <div
+                v-for="location in investigationStore.locations"
+                :key="location.id"
+                class="loc"
+                :class="{
+                  on: investigationStore.isEntered(location.id),
+                  spent: investigationStore.isEntered(location.id)
+                    && investigationStore.objectsOf(location.id).length > 0
+                    && investigationStore.progressOf(location.id).done
+                      === investigationStore.objectsOf(location.id).length,
+                }"
               >
-                <h3>{{ group.category }}</h3>
-                <article v-for="item in group.items" :key="item.pattern" class="scaffold-item">
-                  <strong>{{ item.pattern }}</strong>
+                <div class="lh">
+                  <b>{{ location.name_zh }}</b>
+                  <span
+                    v-if="investigationStore.isEntered(location.id) && investigationStore.objectsOf(location.id).length"
+                    class="prog"
+                  >{{ investigationStore.progressOf(location.id).done }}/{{ investigationStore.objectsOf(location.id).length }}</span>
+                  <span
+                    v-else
+                    class="tag"
+                    :class="investigationStore.isEntered(location.id) ? 'done' : 'open'"
+                  >{{ investigationStore.isEntered(location.id) ? "已进入" : "可进入" }}</span>
+                </div>
+                <p>{{ location.summary_zh }}</p>
+
+                <div v-if="investigationStore.isEntered(location.id)">
+                  <div v-if="investigationStore.objectsOf(location.id).length" class="objs">
+                    <div
+                      v-for="object in investigationStore.objectsOf(location.id)"
+                      :key="object.id"
+                      class="objrow"
+                      :class="investigationStore.statusOf(object.id)"
+                    >
+                      <button
+                        v-if="investigationStore.statusOf(object.id) === 'free'"
+                        class="obj"
+                        type="button"
+                        :disabled="!canInvestigate"
+                        @click="armInspectObject(location, object)"
+                      >
+                        <span class="st"></span>
+                        <span class="nm">{{ object.name_zh }}</span>
+                        <span class="mk">填入输入框</span>
+                      </button>
+                      <div v-else class="obj">
+                        <span class="st"></span>
+                        <span class="nm">{{ object.name_zh }}</span>
+                        <span class="mk">{{ investigationStore.statusOf(object.id) === "mine" ? "已搜查" : "已被搜查" }}</span>
+                      </div>
+                      <p v-if="investigationStore.statusOf(object.id) === 'mine'" class="res">
+                        {{ investigationStore.myResults[object.id] }}
+                      </p>
+                      <p v-else-if="investigationStore.statusOf(object.id) === 'gone'" class="res">
+                        这里已经有人翻过一遍，主持人只把结果发给了搜查者。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  v-else
+                  class="loc-act"
+                  type="button"
+                  :disabled="!canInvestigate"
+                  @click="armEnterLocation(location)"
+                >进入{{ location.name_zh }}</button>
+              </div>
+            </div>
+
+            <div v-show="activeRailTab === 'speak'" class="tabpane">
+              <p class="hint">表达脚手架为英语玩家提供句型与词汇，点句子直接填入输入框。</p>
+              <template v-for="group in languageScaffold.sentence_patterns || []" :key="group.category">
+                <div class="scaf-cat">{{ group.category }}</div>
+                <button
+                  v-for="item in group.items"
+                  :key="item.pattern"
+                  class="scaf"
+                  type="button"
+                  @click="armSentence(item.pattern)"
+                >
+                  <b>{{ item.pattern }}</b>
                   <span v-if="item.meaning">{{ item.meaning }}</span>
-                </article>
-              </section>
-              <div v-if="!languageScaffold.sentence_patterns?.length" class="case-empty phrase-empty">
-                <FileKey2 :size="25" />
-                <span>该剧本暂未整理句型。</span>
+                </button>
+              </template>
+              <template v-for="group in languageScaffold.vocabulary || []" :key="`vocabulary-${group.category}`">
+                <div class="scaf-cat">{{ group.category }} · 词汇</div>
+                <button
+                  v-for="item in group.items"
+                  :key="item.term"
+                  class="scaf"
+                  type="button"
+                  @click="armSentence(item.term)"
+                >
+                  <b>{{ item.term }}</b>
+                  <span v-if="item.meaning">{{ item.meaning }}</span>
+                </button>
+              </template>
+              <div
+                v-if="!languageScaffold.sentence_patterns?.length && !languageScaffold.vocabulary?.length"
+                class="empty"
+              >
+                <strong>这个剧本暂未整理表达脚手架。</strong>
               </div>
             </div>
           </div>
         </aside>
 
         <div ref="remoteAudioContainer" hidden></div>
-      </section>
-    </main>
+      </main>
+
+      <div class="viewer" :class="{ on: openedClue }" @click.self="closeClueViewer">
+        <div v-if="openedClue" class="sheet">
+          <img
+            v-if="getClueAssetUrl(openedClue)"
+            :src="getClueAssetUrl(openedClue)"
+            :alt="`${clueStore.clueTitle(openedClue)}线索卡原图`"
+            @error="hideBrokenClueImage"
+          />
+          <div class="txt">
+            <span>{{ openedClue.visibility === "public" ? "Public clue · 全员同步" : "Private clue · 仅你可见" }}</span>
+            <h3>{{ clueStore.clueTitle(openedClue) }}</h3>
+            <p class="cn">{{ openedClue.title }}</p>
+            <p class="body">{{ clueStore.clueBody(openedClue) }}</p>
+            <p class="src">
+              {{ openedClue.tags?.length ? `标签：${openedClue.tags.join("、")}` : "" }}<br />
+              图片按 clue_id 推导：/img/clue{{ String(openedClue.id).replace(/\D/g, "") }}.jpg
+            </p>
+          </div>
+        </div>
+        <button class="x" type="button" @click="closeClueViewer">✕</button>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.hub select {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: rgba(4, 6, 11, 0.7);
+  color: var(--ink);
+  font-size: 12.5px;
+}
+
+.hub .obj:disabled,
+.hub .loc-act:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hub .res {
+  margin: 0;
+}
+</style>

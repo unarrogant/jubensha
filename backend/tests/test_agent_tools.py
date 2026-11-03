@@ -1,13 +1,15 @@
 import pytest
 from pydantic import ValidationError
 
-from app.agent.tools import _agent_tool_result, _assert_player_tool_allowed, build_dm_tools
+from app.agent.tools import build_dm_tools
 from app.schemas.dm_agent import (
     AgentToolResult,
     EnterLocationArgs,
     InspectObjectArgs,
     UnlockReasoningArgs,
 )
+from app.domain.agent.policy import PolicyService
+from app.application.agent.tool_executor import ToolExecutor
 
 
 @pytest.mark.parametrize(
@@ -37,8 +39,11 @@ def test_tool_schemas_hide_injected_state_from_model():
         room_repository=object(),
         investigation_service=object(),
         reasoning_service=object(),
+        idempotency_service=object(),
     )
-    schemas = {tool.name: tool.args_schema.model_fields for tool in tools}
+    # args_schema contains InjectedState for runtime validation. The schema
+    # exposed to the model is tool_call_schema and must hide that field.
+    schemas = {tool.name: tool.tool_call_schema.model_fields for tool in tools}
 
     assert list(schemas["get_game_state"]) == []
     assert list(schemas["enter_location"]) == ["location_id"]
@@ -71,8 +76,9 @@ def test_tool_schemas_hide_injected_state_from_model():
     ],
 )
 def test_tool_permission_guard_rejects_invalid_request(state, tool_name):
+    policy = PolicyService()
     with pytest.raises(ValueError):
-        _assert_player_tool_allowed(state, tool_name)
+        policy.assert_tool_allowed(state, tool_name)
 
 
 def test_tool_permission_guard_allows_player_in_investigation():
@@ -82,11 +88,19 @@ def test_tool_permission_guard_allows_player_in_investigation():
         "context": {"GAME_STATE": {"stage_id": "investigation"}},
     }
 
-    _assert_player_tool_allowed(state, "inspect_object")
+    PolicyService().assert_tool_allowed(state, "inspect_object")
 
 
 def test_tool_result_uses_stable_schema_and_normalizes_clue_id():
-    result = _agent_tool_result(
+    executor = ToolExecutor.__new__(ToolExecutor)
+    executor.policy_service = PolicyService()
+    result = executor.normalize_result(
+        {
+            "request_type": "player_private",
+            "player_id": "player-1",
+            "context": {"GAME_STATE": {"stage_id": "investigation"}},
+        },
+        "inspect_object",
         {
             "channel": "PRIVATE_MESSAGE",
             "message": "找到戒指",
@@ -108,7 +122,15 @@ def test_tool_result_uses_stable_schema_and_normalizes_clue_id():
 
 
 def test_already_triggered_tool_result_preserves_status():
-    result = _agent_tool_result(
+    executor = ToolExecutor.__new__(ToolExecutor)
+    executor.policy_service = PolicyService()
+    result = executor.normalize_result(
+        {
+            "request_type": "player_private",
+            "player_id": "player-1",
+            "context": {"GAME_STATE": {"stage_id": "investigation"}},
+        },
+        "inspect_object",
         {
             "channel": "PRIVATE_MESSAGE",
             "status": "already_triggered",

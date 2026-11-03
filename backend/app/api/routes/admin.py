@@ -136,6 +136,12 @@ def _room_summary(room: dict) -> dict:
     votes = room.get("votes", {}) or {}
     ending = room.get("ending") or {}
     audit = _agent_audit_entries(room)
+    agent_runs = list(room.get("agent_runs", []) or [])
+    failed_runs = [run for run in agent_runs if run.get("status") == "failed"]
+    failure_codes = Counter(
+        run.get("error_code") or "unknown"
+        for run in failed_runs
+    )
     tool_entries = [entry for entry in audit if entry.get("tool_used")]
     tool_statuses = Counter(entry.get("tool_status") or "unknown" for entry in tool_entries)
     player_stats = []
@@ -193,6 +199,11 @@ def _room_summary(room: dict) -> dict:
             "tool_status_counts": dict(tool_statuses),
             "clue_delivery_count": sum(len(entry.get("clue_ids", [])) for entry in audit),
             "failed_tool_count": sum(status not in {"completed", "success", "already_triggered"} for status in tool_statuses.elements()),
+            "runtime_metrics": room.get("agent_metrics", {}),
+            "run_count": len(agent_runs),
+            "failed_run_count": len(failed_runs),
+            "failure_codes": dict(failure_codes),
+            "runs": agent_runs,
         },
         "players": player_stats,
     }
@@ -332,4 +343,21 @@ async def admin_agent_audit(room_id: str, authorization: str | None = Header(def
         "room_id": room_id,
         "entries": _agent_audit_entries(room),
         "peer_reviews": room.get("peer_reviews", {}),
+    }
+
+
+@router.get("/rooms/{room_id}/agent-runs")
+async def admin_agent_runs(room_id: str, authorization: str | None = Header(default=None)):
+    """Return compact Agent invocation outcomes for operations review."""
+    _require_admin(authorization)
+    room = _room_or_404(room_id)
+    runs = list(room.get("agent_runs", []) or [])
+    return {
+        "room_id": room_id,
+        "runs": runs,
+        "failure_counts": dict(Counter(
+            run.get("error_code") or "unknown"
+            for run in runs
+            if run.get("status") == "failed"
+        )),
     }

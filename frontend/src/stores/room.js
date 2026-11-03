@@ -16,8 +16,12 @@ export const useRoomStore = defineStore("room", () => {
 
   async function loadScripts() {
     catalogLoading.value = true;
-    try { scripts.value = await getScripts(); }
-    finally { catalogLoading.value = false; }
+    try {
+      scripts.value = await getScripts();
+      if (!selectedScriptId.value) selectedScriptId.value = scripts.value[0]?.id || "";
+    } finally {
+      catalogLoading.value = false;
+    }
   }
 
   async function loadWaitingRooms() {
@@ -45,6 +49,43 @@ export const useRoomStore = defineStore("room", () => {
   }
 
   const getCoverUrl = (script) => getAssetUrl(script, script?.cover);
+
+  const zh = (value, fallback) => value || fallback || "";
+
+  // 整站配色跟随当前剧本：manifest.theme 缺省时沿用 hub.css 的默认金。
+  function getThemeVars(script) {
+    const theme = script?.theme;
+    if (!theme) return {};
+    return {
+      "--acc": theme.acc,
+      "--acc-soft": theme.soft,
+      "--acc-dim": theme.dim,
+      "--acc-line": theme.line,
+      "--wash": theme.wash,
+    };
+  }
+
+  const getDisplayName = (script) => zh(script?.title_zh, script?.title);
+  const getDisplaySummary = (script) => zh(script?.summary_zh, script?.summary);
+  const getDmName = (script) =>
+    zh(script?.agent_profile?.display_name_zh, script?.agent_profile?.display_name) || "AI 主持人";
+
+  const scriptTypeLabels = {
+    murder_mystery: "本格推理",
+    folklore_investigation: "民俗悬疑",
+    psychological_mystery: "心理谜案",
+  };
+  const getScriptTypeLabel = (script) =>
+    zh(script?.type_zh, scriptTypeLabels[script?.type]) || "沉浸剧本";
+
+  // 大厅每张卡带自己的主题色；没有声明 theme 的剧本沿用默认金。
+  function getScriptCardVars(script) {
+    const theme = script?.theme || {};
+    return {
+      "--c": theme.acc || "var(--acc)",
+      "--c-soft": theme.soft || "var(--acc-soft)",
+    };
+  }
 
   function saveSession(session) {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -78,6 +119,7 @@ export const useRoomStore = defineStore("room", () => {
   return {
     scripts, waitingRooms, selectedScriptId, selectedScript, catalogLoading, roomsLoading,
     loadScripts, loadWaitingRooms, selectScript, getScript, getAssetUrl, getClueAssetUrl, getCoverUrl,
+    getThemeVars, getDisplayName, getDisplaySummary, getDmName, getScriptTypeLabel, getScriptCardVars,
     readSession, clearSession, createNewRoom, joinExistingRoom,
   };
 });

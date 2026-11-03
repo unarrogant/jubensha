@@ -1,483 +1,887 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
-  Activity,
-  ChevronRight,
+  AlertTriangle,
+  ArrowUpDown,
+  Bot,
+  BookOpen,
+  Copy,
   Database,
   Download,
+  LayoutDashboard,
   LogOut,
   RefreshCw,
-  ShieldCheck,
+  Search,
   Trash2,
   Users,
   X,
 } from "@lucide/vue";
-import {
-  deleteAdminRoom,
-  exportAdminRoom,
-  getAdminAgentAudit,
-  getAdminRoom,
-  getAdminRoomSummary,
-  getAdminRooms,
-} from "../services/api";
+import { useAdminStore } from "../stores/admin";
+
+const TOKEN_KEY = "script_kill_admin_token";
+
+const STAGE_CN = {
+  waiting: "等待入席",
+  role_selection: "角色分配",
+  intro: "自我介绍",
+  investigation: "搜证",
+  discussion: "讨论推理",
+  voting: "最终投票",
+  ending: "最终复盘",
+};
+const STAGE_FLOW = Object.keys(STAGE_CN);
+const STATUS_CN = { waiting: "等待中", playing: "进行中", active: "进行中", ended: "已结束" };
+const VIEWS = [
+  { key: "overview", label: "总览", icon: LayoutDashboard, sub: "整个平台的运行状况一眼看完" },
+  { key: "rooms", label: "房间", icon: Database, sub: "点任意一行查看这一局的完整数据" },
+  { key: "ai", label: "AI 运行", icon: Bot, sub: "主持人的每一次生成、工具调用与失败都在这里" },
+  { key: "scripts", label: "剧本", icon: BookOpen, sub: "按剧本聚合，看哪套真的被玩完" },
+];
+const TABS = [
+  { key: "summary", label: "概览" },
+  { key: "players", label: "玩家" },
+  { key: "events", label: "事件流" },
+  { key: "ai", label: "AI 审计" },
+  { key: "peer", label: "互评" },
+];
+const COLUMNS = [
+  { key: "id", label: "房间" },
+  { key: "scriptId", label: "剧本" },
+  { key: "status", label: "状态" },
+  { key: "stageId", label: "阶段" },
+  { key: "playerCount", label: "玩家" },
+  { key: "eventCount", label: "事件" },
+  { key: "aiRequests", label: "AI 请求" },
+  { key: "updatedAt", label: "更新" },
+];
 
 const router = useRouter();
-const token = localStorage.getItem("script_kill_admin_token");
-const adminName = localStorage.getItem("script_kill_admin_username") || "管理员";
-const rooms = ref([]);
-const selectedRoom = ref(null);
-const roomAudit = ref({ entries: [], peer_reviews: {} });
-const roomSummary = ref(null);
-const selectedRoomId = ref("");
-const loading = ref(true);
-const detailLoading = ref(false);
-const refreshing = ref(false);
-const errorMessage = ref("");
-const selectedPlayerId = ref("");
-const playerHistory = ref(null);
-const historyLoading = ref(false);
-const actionLoading = ref(false);
-let refreshTimer = null;
+const adminStore = useAdminStore();
 
-const metrics = computed(() => ({
-  total: rooms.value.length,
-  waiting: rooms.value.filter((room) => room.status === "waiting").length,
-  playing: rooms.value.filter((room) => ["playing", "active"].includes(room.status)).length,
-  players: rooms.value.reduce((sum, room) => sum + Number(room.player_count || 0), 0),
-}));
+const view = ref("overview");
+const query = ref("");
+const statusFilter = ref("all");
+const runFilter = ref("all");
+const sortState = ref({ key: "updatedAt", dir: -1 });
+const drawerTab = ref("summary");
+const eventFilter = ref("all");
+const openPlayerId = ref("");
+const drawerOpen = ref(false);
+const actionBusy = ref(false);
+const toastText = ref("");
+let toastTimer = null;
+let pollTimer = null;
 
-function formatStatus(status) {
-  return {
-    waiting: "等待中",
-    playing: "进行中",
-    active: "进行中",
-    ended: "已结束",
-  }[status] || status || "未知";
+const rooms = computed(() => adminStore.rooms);
+const selectedRoom = computed(() => adminStore.selectedRoom);
+const auditOfSelected = computed(() =>
+  selectedRoom.value ? adminStore.audits[selectedRoom.value.id] : null,
+);
+const currentView = computed(() => VIEWS.find((item) => item.key === view.value) || VIEWS[0]);
+
+function count(key) {
+  if (key === "ai") return adminStore.runCount;
+  if (key === "scripts") return adminStore.scriptCount;
+  return rooms.value.length;
 }
 
-function formatDate(value) {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN");
+function num(value) {
+  return Number(value || 0).toLocaleString("zh-CN");
 }
 
-function roomPlayers(room) {
-  return Array.isArray(room?.players) ? room.players : [];
+function stageCn(id) {
+  return STAGE_CN[id] || id || "—";
 }
 
-function roomMessages(room) {
-  return Array.isArray(room?.messages) ? room.messages : [];
+function statusCn(status) {
+  return STATUS_CN[status] || status || "未知";
 }
 
-function roomVotes(room) {
-  const votes = room?.game?.votes || room?.votes;
-  return votes && typeof votes === "object" ? Object.entries(votes) : [];
+function shortTime(iso) {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
 
-function playerSummary(playerId) {
-  return roomSummary.value?.players?.find((player) => player.player_id === playerId);
+function fullTime(iso) {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
-function isUnauthorized(error) {
-  return error?.message?.includes("401") || error?.message?.includes("登录") || error?.message?.includes("过期");
+function snapshotLabel() {
+  if (!adminStore.snapshotAt) return "正在读取…";
+  return `快照 ${new Date(adminStore.snapshotAt).toLocaleTimeString("zh-CN", { hour12: false })}`;
 }
 
-function signOut() {
-  localStorage.removeItem("script_kill_admin_token");
-  localStorage.removeItem("script_kill_admin_username");
-  router.replace("/admin/login");
+function matches(room) {
+  if (statusFilter.value !== "all" && room.status !== statusFilter.value) return false;
+  const text = query.value.trim().toLowerCase();
+  if (!text) return true;
+  const haystack = [
+    room.id,
+    room.scriptId,
+    room.stageId,
+    ...room.players.map((player) => `${player.name} ${player.characterId || ""}`),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(text);
 }
 
-async function loadRooms({ quiet = false } = {}) {
-  if (!quiet) loading.value = true;
-  else refreshing.value = true;
-  errorMessage.value = "";
-  try {
-    rooms.value = await getAdminRooms(token);
-    if (selectedRoomId.value && !rooms.value.some((room) => room.id === selectedRoomId.value)) {
-      selectedRoomId.value = "";
-      selectedRoom.value = null;
-      roomSummary.value = null;
-      playerHistory.value = null;
-    }
-  } catch (error) {
-    if (isUnauthorized(error)) return signOut();
-    errorMessage.value = error.message || "房间数据加载失败";
-  } finally {
-    loading.value = false;
-    refreshing.value = false;
+const visibleRooms = computed(() => {
+  const key = sortState.value.key;
+  const dir = sortState.value.dir;
+  return rooms.value
+    .filter(matches)
+    .slice()
+    .sort((left, right) => String(left[key] ?? "").localeCompare(String(right[key] ?? ""), "zh", { numeric: true }) * dir);
+});
+
+const kpis = computed(() => {
+  const list = rooms.value;
+  const waiting = list.filter((room) => room.status === "waiting").length;
+  const playing = list.filter((room) => ["playing", "active"].includes(room.status)).length;
+  const ended = list.filter((room) => room.status === "ended").length;
+  const failed = list.reduce((sum, room) => sum + room.failedRuns + room.toolFailed, 0);
+  return [
+    { label: "房间总数", value: num(list.length), note: "含进行中与已结束" },
+    { label: "进行中", value: num(playing), note: `等待 ${waiting} · 结束 ${ended}`, cls: "good" },
+    { label: "玩家总数", value: num(list.reduce((sum, room) => sum + room.playerCount, 0)), note: "全部席位相加" },
+    { label: "AI 请求", value: num(list.reduce((sum, room) => sum + room.aiRequests, 0)), note: `工具调用 ${num(list.reduce((sum, room) => sum + room.toolCalls, 0))}` },
+    { label: "异常", value: num(failed), note: failed ? "失败运行 + 工具错误" : "暂无失败记录", cls: failed ? "alert" : "" },
+    { label: "线索发放", value: num(list.reduce((sum, room) => sum + room.clueCount, 0)), note: "公开线索同步全员" },
+  ];
+});
+
+const eventFeed = computed(() =>
+  rooms.value
+    .flatMap((room) => room.events.map((event) => ({ ...event, roomId: room.id })))
+    .sort((left, right) => String(right.created_at || "").localeCompare(String(left.created_at || "")))
+    .slice(0, 14),
+);
+
+const scriptRows = computed(() => {
+  const ids = [...new Set(rooms.value.map((room) => room.scriptId).filter(Boolean))];
+  return ids.map((scriptId) => {
+    const list = rooms.value.filter((room) => room.scriptId === scriptId);
+    return {
+      scriptId,
+      version: list[0].scriptVersion,
+      rooms: list.length,
+      live: list.filter((room) => ["playing", "active"].includes(room.status)).length,
+      people: list.reduce((sum, room) => sum + room.playerCount, 0),
+      events: list.reduce((sum, room) => sum + room.eventCount, 0),
+      clues: list.reduce((sum, room) => sum + room.clueCount, 0),
+      requests: list.reduce((sum, room) => sum + room.aiRequests, 0),
+      failures: list.reduce((sum, room) => sum + room.failedRuns + room.toolFailed, 0),
+    };
+  });
+});
+const maxScriptEvents = computed(() => Math.max(1, ...scriptRows.value.map((row) => row.events)));
+const maxRoomEvents = computed(() => Math.max(1, ...visibleRooms.value.map((room) => room.eventCount)));
+
+const allRuns = computed(() => {
+  const list = rooms.value
+    .flatMap((room) => room.runs.map((run) => ({ ...run, roomId: room.id, scriptId: room.scriptId })))
+    .sort((left, right) => String(right.created_at || "").localeCompare(String(left.created_at || "")));
+  return runFilter.value === "all" ? list : list.filter((run) => run.status === runFilter.value);
+});
+
+const recentAudits = computed(() =>
+  adminStore
+    .auditEntries()
+    .sort((left, right) => String(right.created_at || "").localeCompare(String(left.created_at || "")))
+    .slice(0, 12),
+);
+
+const statusOptions = computed(() => ["all", ...new Set(rooms.value.map((room) => room.status))]);
+const runOptions = computed(() => [
+  "all",
+  ...new Set(rooms.value.flatMap((room) => room.runs.map((run) => run.status))),
+]);
+const selectedEventTypes = computed(() => [
+  "all",
+  ...new Set((selectedRoom.value?.events || []).map((event) => event.event_type)),
+]);
+const selectedEvents = computed(() => {
+  const events = [...(selectedRoom.value?.events || [])].reverse();
+  return eventFilter.value === "all"
+    ? events
+    : events.filter((event) => event.event_type === eventFilter.value);
+});
+const peerRows = computed(() =>
+  Object.entries(selectedRoom.value?.peerReviews || {}).map(([voterId, review]) => ({
+    voterId,
+    bestSpeakerId: review.best_speaker_id,
+    bestReasonerId: review.best_reasoner_id,
+  })),
+);
+const voteRows = computed(() => {
+  const distribution = selectedRoom.value?.voteDistribution || {};
+  const max = Math.max(1, ...Object.values(distribution));
+  return Object.entries(distribution).map(([target, votes]) => ({ target, votes, max }));
+});
+
+function nameOf(room, playerId) {
+  if (!playerId) return "—";
+  const player = room?.players.find((item) => item.id === playerId);
+  if (!player) return playerId;
+  return player.characterId ? `${player.name} · ${player.characterId}` : player.name;
+}
+
+function eventText(event) {
+  const payload = event.payload || {};
+  return (
+    payload.message ||
+    payload.content ||
+    payload.clue_id ||
+    payload.location_id ||
+    payload.object_text ||
+    payload.reason ||
+    payload.suspect_id ||
+    payload.stage_id ||
+    JSON.stringify(payload)
+  );
+}
+
+function barStyle(value, max) {
+  return { width: `${max ? Math.round((Number(value) / max) * 100) : 0}%` };
+}
+
+function toast(text) {
+  toastText.value = text;
+  if (toastTimer) window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    toastText.value = "";
+  }, 2400);
+}
+
+function go(key) {
+  view.value = key;
+  eventFilter.value = "all";
+  if (key === "ai") {
+    // 问答审计按房间单独一个接口，切到这个视图才补齐，避免每次轮询都全量拉。
+    rooms.value.forEach((room) => adminStore.loadAudit(room.id));
   }
 }
 
-async function selectRoom(roomId, { quiet = false } = {}) {
-  selectedRoomId.value = roomId;
-  if (!quiet) {
-    selectedRoom.value = null;
-    roomAudit.value = { entries: [], peer_reviews: {} };
-    roomSummary.value = null;
-    selectedPlayerId.value = "";
-    playerHistory.value = null;
-    detailLoading.value = true;
-  }
-  errorMessage.value = "";
-  try {
-    const [roomDetail, audit, summary] = await Promise.all([
-      getAdminRoom(roomId, token),
-      getAdminAgentAudit(roomId, token),
-      getAdminRoomSummary(roomId, token),
-    ]);
-    selectedRoom.value = roomDetail;
-    roomAudit.value = audit;
-    roomSummary.value = summary;
-  } catch (error) {
-    if (isUnauthorized(error)) return signOut();
-    errorMessage.value = error.message || "房间详情加载失败";
-  } finally {
-    if (!quiet) detailLoading.value = false;
+function sortBy(key) {
+  if (sortState.value.key === key) {
+    sortState.value = { key, dir: sortState.value.dir * -1 };
+  } else {
+    sortState.value = { key, dir: 1 };
   }
 }
 
-function closeDetail() {
-  selectedRoomId.value = "";
-  selectedRoom.value = null;
-  roomAudit.value = { entries: [], peer_reviews: {} };
-  roomSummary.value = null;
-  playerHistory.value = null;
-  selectedPlayerId.value = "";
+function onSearch() {
+  if (query.value.trim() && view.value === "overview") view.value = "rooms";
 }
 
-async function selectPlayer(playerId) {
-  if (!selectedRoomId.value || !playerId) return;
-  selectedPlayerId.value = playerId;
-  historyLoading.value = true;
+async function openRoom(room) {
+  adminStore.select(room.id);
+  drawerTab.value = "summary";
+  eventFilter.value = "all";
+  openPlayerId.value = "";
+  drawerOpen.value = true;
+  await adminStore.load();
+}
+
+function closeDrawer() {
+  drawerOpen.value = false;
+  adminStore.select("");
+  openPlayerId.value = "";
+}
+
+async function setTab(key) {
+  drawerTab.value = key;
+  if (key === "ai" && selectedRoom.value) await adminStore.loadAudit(selectedRoom.value.id);
+}
+
+async function togglePlayer(playerId) {
+  if (openPlayerId.value === playerId) {
+    openPlayerId.value = "";
+    return;
+  }
+  openPlayerId.value = playerId;
+  if (selectedRoom.value) await adminStore.loadPlayerHistory(selectedRoom.value.id, playerId);
+}
+
+function playerHistory(playerId) {
+  return adminStore.histories[`${selectedRoom.value?.id}:${playerId}`] || null;
+}
+
+function runPillClass(status) {
+  return status === "succeeded" ? "ok" : "failed";
+}
+
+function toolPillClass(entry) {
+  return /completed|success|already_triggered/.test(entry.tool_status || "") ? "ok" : "failed";
+}
+
+async function copyRoomId() {
+  if (!selectedRoom.value) return;
   try {
-    playerHistory.value = await getAdminPlayerHistory(selectedRoomId.value, playerId, token);
-  } catch (error) {
-    if (isUnauthorized(error)) return signOut();
-    errorMessage.value = error.message || "玩家历史加载失败";
-  } finally {
-    historyLoading.value = false;
+    await navigator.clipboard.writeText(selectedRoom.value.id);
+    toast("已复制房间号");
+  } catch {
+    toast("浏览器拒绝了剪贴板权限");
   }
 }
 
-async function downloadRoomExport() {
-  if (!selectedRoomId.value || actionLoading.value) return;
-  actionLoading.value = true;
+async function exportRoom() {
+  if (!selectedRoom.value || actionBusy.value) return;
+  actionBusy.value = true;
   try {
-    const blob = await exportAdminRoom(selectedRoomId.value, token);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `room-${selectedRoomId.value}-admin-export.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    await adminStore.downloadExport(selectedRoom.value.id);
+    toast("已导出这一局的完整 JSON");
   } catch (error) {
-    if (isUnauthorized(error)) return signOut();
-    errorMessage.value = error.message || "导出失败";
+    toast(error.message || "导出失败");
   } finally {
-    actionLoading.value = false;
+    actionBusy.value = false;
   }
 }
 
 async function removeRoom() {
-  if (!selectedRoomId.value || actionLoading.value) return;
-  const roomId = selectedRoomId.value;
-  if (!window.confirm(`确定永久删除房间 ${roomId} 及其全部历史记录吗？此操作不可恢复。`)) return;
-  actionLoading.value = true;
+  const room = selectedRoom.value;
+  if (!room || actionBusy.value) return;
+  if (!window.confirm(`确定永久删除房间 ${room.id} 及其全部历史记录吗？此操作不可恢复。`)) return;
+  actionBusy.value = true;
   try {
-    await deleteAdminRoom(roomId, token);
-    closeDetail();
-    await loadRooms({ quiet: true });
+    await adminStore.removeRoom(room.id);
+    closeDrawer();
+    toast(`房间 ${room.id} 已删除`);
   } catch (error) {
-    if (isUnauthorized(error)) return signOut();
-    errorMessage.value = error.message || "删除失败";
+    toast(error.message || "删除失败");
   } finally {
-    actionLoading.value = false;
+    actionBusy.value = false;
   }
 }
 
-function peerReviewRows(room) {
-  const players = Object.fromEntries(roomPlayers(room).map((player) => [player.id, player.name]));
-  return Object.entries(roomAudit.value.peer_reviews || {}).map(([voterId, review]) => ({
-    voter: players[voterId] || voterId,
-    bestSpeaker: players[review.best_speaker_id] || review.best_speaker_id,
-    bestReasoner: players[review.best_reasoner_id] || review.best_reasoner_id,
-  }));
+function signOut() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem("script_kill_admin_username");
+  router.replace("/admin/login");
 }
 
-function toolDataText(entry) {
-  const data = entry?.tool_data;
-  if (!data || typeof data !== "object" || !Object.keys(data).length) return "";
-  return JSON.stringify(data, null, 2);
+function onKeydown(event) {
+  if (event.key === "Escape" && drawerOpen.value) closeDrawer();
 }
+
+watch(
+  () => adminStore.authFailed,
+  (failed) => {
+    if (failed) signOut();
+  },
+);
 
 onMounted(() => {
-  if (!token) return router.replace("/admin/login");
-  loadRooms();
-  refreshTimer = window.setInterval(async () => {
-    await loadRooms({ quiet: true });
-    if (selectedRoomId.value) await selectRoom(selectedRoomId.value, { quiet: true });
-  }, 5000);
+  if (!localStorage.getItem(TOKEN_KEY)) return router.replace("/admin/login");
+  adminStore.load();
+  pollTimer = window.setInterval(() => adminStore.load(), 8000);
+  document.addEventListener("keydown", onKeydown);
 });
 
 onBeforeUnmount(() => {
-  if (refreshTimer) window.clearInterval(refreshTimer);
+  if (pollTimer) window.clearInterval(pollTimer);
+  if (toastTimer) window.clearTimeout(toastTimer);
+  document.removeEventListener("keydown", onKeydown);
 });
 </script>
 
 <template>
-  <main class="admin-page">
-    <header class="admin-header">
-      <div class="admin-header-brand">
-        <span class="admin-header-icon"><ShieldCheck :size="19" /></span>
-        <div><strong>剧本杀管理后台</strong><small>运行数据与房间监控</small></div>
+  <main class="admin">
+    <aside class="side">
+      <div class="brand">
+        <div class="m">幕</div>
+        <div><b>幕间戏语</b><span>Ops Console</span></div>
       </div>
-      <div class="admin-header-actions">
-        <span class="admin-user">{{ adminName }}</span>
-        <button class="icon-text-button" type="button" :disabled="refreshing" @click="loadRooms({ quiet: true })">
-          <RefreshCw :size="14" :class="{ spin: refreshing }" />刷新
+      <nav class="nav">
+        <button
+          v-for="item in VIEWS"
+          :key="item.key"
+          type="button"
+          :class="{ on: view === item.key }"
+          @click="go(item.key)"
+        >
+          <component :is="item.icon" :size="15" />
+          {{ item.label }}
+          <em>{{ num(count(item.key)) }}</em>
         </button>
-        <button class="icon-text-button" type="button" @click="signOut"><LogOut :size="14" />退出</button>
+      </nav>
+      <div class="side-foot">
+        <div class="snap">{{ snapshotLabel() }}</div>
+        <button class="ghost" type="button" @click="signOut"><LogOut :size="14" /> 退出登录</button>
       </div>
-    </header>
+    </aside>
 
-    <section class="admin-content">
-      <div class="admin-page-intro">
-        <div><span class="admin-eyebrow">OPERATIONS</span><h1>房间总览</h1><p>实时查看房间状态、玩家进度和主持流程数据。</p></div>
-        <div class="admin-sync"><Activity :size="14" />每 5 秒同步</div>
-      </div>
-      <p v-if="errorMessage" class="admin-alert wide-admin-alert">{{ errorMessage }}</p>
-
-      <div class="admin-metrics">
-        <article><Database :size="17" /><span>全部房间</span><strong>{{ metrics.total }}</strong></article>
-        <article><Activity :size="17" /><span>进行中</span><strong>{{ metrics.playing }}</strong></article>
-        <article><Users :size="17" /><span>等待中</span><strong>{{ metrics.waiting }}</strong></article>
-        <article><Users :size="17" /><span>在线玩家</span><strong>{{ metrics.players }}</strong></article>
-      </div>
-
-      <section class="admin-workspace">
-        <div class="admin-room-table-wrap">
-          <div class="admin-section-heading"><div><h2>房间列表</h2><span>{{ rooms.length }} 个记录</span></div></div>
-          <div v-if="loading" class="admin-empty">正在读取房间数据...</div>
-          <div v-else-if="!rooms.length" class="admin-empty">暂无房间记录</div>
-          <div v-else class="admin-room-table">
-            <button
-              v-for="room in rooms"
-              :key="room.id"
-              class="admin-room-row"
-              :class="{ selected: selectedRoomId === room.id }"
-              type="button"
-              @click="selectRoom(room.id)"
-            >
-              <span class="room-id">{{ room.id }}</span>
-              <span class="room-script"><strong>{{ room.script_id || "未指定剧本" }}</strong><small>v{{ room.script_version || "-" }}</small></span>
-              <span class="room-status" :data-status="room.status">{{ formatStatus(room.status) }}</span>
-              <span class="room-capacity">{{ room.player_count || 0 }} / {{ room.required_players || "-" }} 人</span>
-              <ChevronRight :size="16" />
-            </button>
+    <div class="main">
+      <div class="top">
+        <div>
+          <h1>{{ currentView.label }}</h1>
+          <div class="sub">
+            <template v-if="view === 'rooms'">{{ visibleRooms.length }} / {{ rooms.length }} 间 · </template>{{ currentView.sub }}
           </div>
         </div>
+        <div class="sp"></div>
+        <label class="search">
+          <Search :size="14" style="color: var(--faint)" />
+          <input v-model="query" placeholder="搜索房间号 / 剧本 / 玩家" @input="onSearch" />
+        </label>
+        <div class="filters">
+          <template v-if="view === 'rooms'">
+            <button
+              v-for="option in statusOptions"
+              :key="option"
+              type="button"
+              class="chip"
+              :class="{ on: statusFilter === option }"
+              @click="statusFilter = option"
+            >{{ option === "all" ? "全部" : statusCn(option) }}</button>
+          </template>
+          <template v-else-if="view === 'ai'">
+            <button
+              v-for="option in runOptions"
+              :key="option"
+              type="button"
+              class="chip"
+              :class="{ on: runFilter === option }"
+              @click="runFilter = option"
+            >{{ option === "all" ? "全部" : option }}</button>
+          </template>
+        </div>
+        <button class="primary" type="button" :disabled="adminStore.refreshing" @click="adminStore.load()">
+          <RefreshCw :size="14" :class="{ spin: adminStore.refreshing }" />重新读取
+        </button>
+      </div>
 
-        <aside class="admin-detail-panel">
-          <template v-if="selectedRoomId && detailLoading"><div class="admin-detail-loading">正在读取房间快照...</div></template>
-          <template v-else-if="selectedRoom">
-            <div class="admin-detail-heading">
-              <div><span>ROOM SNAPSHOT</span><h2>{{ selectedRoom.id }}</h2></div>
-              <div class="admin-detail-actions">
-                <button class="icon-text-button" type="button" :disabled="actionLoading" title="导出完整 JSON" @click="downloadRoomExport"><Download :size="14" />导出</button>
-                <button class="icon-text-button danger" type="button" :disabled="actionLoading" title="永久删除房间" @click="removeRoom"><Trash2 :size="14" />删除</button>
-                <button class="admin-close-button" type="button" aria-label="关闭详情" title="关闭详情" @click="closeDetail"><X :size="17" /></button>
+      <div class="body">
+        <p v-if="adminStore.error" class="alert">
+          <AlertTriangle :size="15" />{{ adminStore.error }}
+        </p>
+        <p v-else-if="adminStore.detailFailedIds.length" class="alert">
+          <AlertTriangle :size="15" />{{ adminStore.detailFailedIds.join("、") }} 的完整快照没读到，只显示汇总数字。
+        </p>
+
+        <!-- 总览 -->
+        <template v-if="view === 'overview'">
+          <div class="kpis">
+            <div v-for="card in kpis" :key="card.label" class="kpi" :class="card.cls">
+              <span>{{ card.label }}</span><b>{{ card.value }}</b><small>{{ card.note }}</small>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="card">
+              <header><h2>最近事件</h2><div class="sp"></div><em>{{ eventFeed.length }} 条 · 跨房间</em></header>
+              <div class="feed">
+                <div v-for="event in eventFeed" :key="event.id" class="ev">
+                  <time>{{ shortTime(event.created_at) }}</time>
+                  <span class="t">{{ event.event_type }}</span>
+                  <p :title="event.roomId">{{ eventText(event) }}</p>
+                  <span class="pill">{{ (event.roomId || "").slice(0, 4) }}</span>
+                </div>
+                <div v-if="!eventFeed.length" class="empty"><b>暂无事件</b>开一局游戏后这里会实时铺开。</div>
               </div>
             </div>
-            <dl class="detail-facts">
-              <div><dt>剧本</dt><dd>{{ selectedRoom.script_id }} / v{{ selectedRoom.script_version }}</dd></div>
-              <div><dt>状态</dt><dd>{{ formatStatus(selectedRoom.status) }}</dd></div>
-              <div><dt>创建时间</dt><dd>{{ formatDate(selectedRoom.created_at) }}</dd></div>
-              <div><dt>当前阶段</dt><dd>{{ selectedRoom.game?.stage_id || "-" }}</dd></div>
-            </dl>
-            <div class="detail-section">
-              <h3>玩家 <span>{{ roomPlayers(selectedRoom).length }}</span></h3>
-              <div v-if="roomPlayers(selectedRoom).length" class="detail-player-list">
-                <button v-for="player in roomPlayers(selectedRoom)" :key="player.id || player.name" type="button" :class="{ selected: selectedPlayerId === player.id }" @click="selectPlayer(player.id)">
-                  <span class="admin-player-primary">
-                    <strong>{{ player.name || player.id }}</strong>
-                    <small>{{ player.character_name || player.character_id || "未分配角色" }}</small>
-                  </span>
-                  <small class="admin-player-activity">
-                    发言 {{ playerSummary(player.id)?.message_count || 0 }} ·
-                    提问 {{ playerSummary(player.id)?.question_count || 0 }} ·
-                    线索 {{ playerSummary(player.id)?.clue_count || 0 }} ·
-                    {{ playerSummary(player.id)?.has_voted ? "已投票" : "未投票" }}
-                  </small>
-                </button>
+            <div class="stack">
+              <div class="card">
+                <header><h2>剧本分布</h2><div class="sp"></div><em>{{ adminStore.scriptCount }} 套</em></header>
+                <div class="in">
+                  <div v-for="row in scriptRows" :key="row.scriptId" class="kv">
+                    <span>{{ row.scriptId }} <small style="color: var(--faint)">v{{ row.version }}</small></span>
+                    <b>{{ row.rooms }} 间 · {{ row.people }} 人 · {{ num(row.events) }} 事件</b>
+                  </div>
+                  <div v-if="!scriptRows.length" class="empty">还没有房间</div>
+                </div>
               </div>
-              <p v-else class="detail-muted">暂无玩家数据</p>
-            </div>
-            <div v-if="roomSummary" class="detail-section admin-summary-section">
-              <h3>本局运行指标 <span>{{ roomSummary.event_count }} 个事件</span></h3>
-              <div class="detail-stat-grid summary-stat-grid">
-                <div><span>玩家发言</span><strong>{{ roomSummary.message_count }}</strong></div>
-                <div><span>AI 请求</span><strong>{{ roomSummary.ai?.request_count || 0 }}</strong></div>
-                <div><span>工具调用</span><strong>{{ roomSummary.ai?.tool_call_count || 0 }}</strong></div>
-                <div><span>搜证操作</span><strong>{{ roomSummary.investigation_count }}</strong></div>
-                <div><span>投票人数</span><strong>{{ roomSummary.vote_count }} / {{ roomSummary.player_count }}</strong></div>
-                <div><span>投票状态</span><strong>{{ !roomSummary.vote_count ? "尚未投票" : roomSummary.vote_tied ? "平票" : "已形成分布" }}</strong></div>
+              <div class="card">
+                <header><h2>主持响应延迟</h2><div class="sp"></div><em>p50 / p95</em></header>
+                <div class="in">
+                  <div v-for="room in rooms.filter((item) => item.runs.length)" :key="room.id" class="kv">
+                    <span>{{ room.id }} · {{ room.scriptId }}</span>
+                    <b>
+                      {{ room.p50 != null ? Math.round(room.p50) + "ms" : "—" }}
+                      <small style="color: var(--faint); font-family: var(--mono)">p95 {{ room.p95 != null ? Math.round(room.p95) : "—" }}</small>
+                    </b>
+                  </div>
+                  <div v-if="!rooms.some((item) => item.runs.length)" class="empty"><b>还没有 AI 运行记录</b></div>
+                </div>
               </div>
-              <p v-if="roomSummary.ending" class="summary-ending"><b>最终结局：</b>{{ roomSummary.ending.title || roomSummary.ending.id }}</p>
-              <p v-else class="detail-muted">结局尚未生成；投票只展示分布，不评价对错。</p>
             </div>
-            <div v-if="selectedPlayerId" class="detail-section admin-audit-section">
-              <h3>玩家历史 <span>{{ playerHistory?.events?.length || 0 }} 个事件</span></h3>
-              <p v-if="historyLoading" class="detail-muted">正在读取玩家历史...</p>
-              <template v-else-if="playerHistory">
-                <div class="player-history-list">
-                  <div v-for="event in [...(playerHistory.events || [])].reverse()" :key="event.id">
-                    <strong>{{ event.event_type }}</strong>
-                    <small>{{ formatDate(event.created_at) }}</small>
-                    <p>{{ JSON.stringify(event.payload) }}</p>
+          </div>
+        </template>
+
+        <!-- 房间 -->
+        <template v-else-if="view === 'rooms'">
+          <div class="card">
+            <header><h2>房间列表</h2><div class="sp"></div><em>{{ visibleRooms.length }} / {{ rooms.length }}</em></header>
+            <div v-if="adminStore.loading" class="empty">正在读取房间数据…</div>
+            <div v-else-if="!visibleRooms.length" class="empty"><b>没有符合条件的房间</b>换个关键词或清空状态筛选。</div>
+            <table v-else>
+              <thead>
+                <tr>
+                  <th
+                    v-for="column in COLUMNS"
+                    :key="column.key"
+                    :class="{ sorted: sortState.key === column.key }"
+                    @click="sortBy(column.key)"
+                  >
+                    {{ column.label }}<template v-if="sortState.key === column.key">{{ sortState.dir < 0 ? " ↓" : " ↑" }}</template>
+                    <ArrowUpDown v-else :size="11" style="opacity:.45" />
+                  </th>
+                  <th class="no"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="room in visibleRooms" :key="room.id" class="clickable" @click="openRoom(room)">
+                  <td>
+                    <span class="id">{{ room.id }}</span>
+                    <span v-if="room.archived" class="pill ended">归档</span>
+                  </td>
+                  <td>{{ room.scriptId }} <small style="color: var(--faint)">v{{ room.scriptVersion }}</small></td>
+                  <td><span class="pill" :class="room.status">{{ statusCn(room.status) }}</span></td>
+                  <td>{{ stageCn(room.stageId) }}</td>
+                  <td>
+                    <div class="rowflex">
+                      <span class="num">{{ room.playerCount }}/{{ room.requiredPlayers }}</span>
+                      <div class="bar"><i :style="barStyle(room.playerCount, room.requiredPlayers)"></i></div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="rowflex">
+                      <span class="num">{{ num(room.eventCount) }}</span>
+                      <div class="bar gold"><i :style="barStyle(room.eventCount, maxRoomEvents)"></i></div>
+                    </div>
+                  </td>
+                  <td class="num">
+                    {{ num(room.aiRequests) }}
+                    <span v-if="room.failedRuns" class="pill failed">{{ room.failedRuns }}</span>
+                  </td>
+                  <td>{{ fullTime(room.updatedAt || room.createdAt) }}</td>
+                  <td><span class="pill">详情 →</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <!-- AI 运行 -->
+        <template v-else-if="view === 'ai'">
+          <div class="grid2">
+            <div class="card">
+              <header><h2>运行记录</h2><div class="sp"></div><em>{{ allRuns.length }} 次 · 状态可在右上角筛选</em></header>
+              <table v-if="allRuns.length">
+                <thead>
+                  <tr>
+                    <th class="no">时间</th><th class="no">房间</th><th class="no">类型</th>
+                    <th class="no">阶段</th><th class="no">状态</th><th class="no">延迟</th><th class="no">Token</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(run, index) in allRuns" :key="`${run.roomId}-${run.id}-${index}`">
+                    <td>{{ fullTime(run.created_at) }}</td>
+                    <td><span class="id">{{ (run.roomId || "").slice(0, 8) }}</span></td>
+                    <td>{{ run.request_type || "—" }}</td>
+                    <td>{{ stageCn(run.stage_id) }}</td>
+                    <td>
+                      <span class="pill" :class="runPillClass(run.status)">{{ run.status }}</span>
+                      <div v-if="run.error_code" style="font-size: 10.5px; color: var(--warn); margin-top: 3px">{{ run.error_code }}</div>
+                    </td>
+                    <td class="num">{{ run.elapsed_ms != null ? Math.round(run.elapsed_ms) + "ms" : "—" }}</td>
+                    <td class="num">{{ num((run.input_tokens || 0) + (run.output_tokens || 0)) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-else class="empty"><b>没有 AI 运行记录</b>玩家与主持人对话后才会产生。</div>
+            </div>
+            <div class="card">
+              <header><h2>最近问答审计</h2><div class="sp"></div><em>{{ recentAudits.length }} 条</em></header>
+              <div class="in scroll">
+                <div v-for="entry in recentAudits" :key="`${entry.roomId}-${entry.id}`" class="qa">
+                  <p class="q">{{ entry.question || "（无提问文字）" }}</p>
+                  <p class="a">{{ entry.answer || "（无回答文字）" }}</p>
+                  <div class="f">
+                    <span class="pill" :class="entry.visibility === 'public' ? '' : 'ok'">{{ entry.visibility === "public" ? "公开" : "仅本人" }}</span>
+                    <span v-if="entry.tool_used" class="pill" :class="toolPillClass(entry)">{{ entry.tool_name || "tool" }}</span>
+                    <span v-if="entry.clue_ids?.length" class="pill">{{ entry.clue_ids.length }} 条线索</span>
+                    <small>{{ entry.player_name || entry.player_id }} · {{ (entry.roomId || "").slice(0, 8) }}</small>
                   </div>
                 </div>
-              </template>
-            </div>
-            <div class="detail-stat-grid">
-              <div><span>消息</span><strong>{{ roomMessages(selectedRoom).length }}</strong></div>
-              <div><span>投票</span><strong>{{ roomVotes(selectedRoom).length }}</strong></div>
-              <div><span>公共线索</span><strong>{{ selectedRoom.game?.public_clue_ids?.length || selectedRoom.public_clue_ids?.length || 0 }}</strong></div>
-            </div>
-            <div class="detail-section admin-audit-section">
-              <h3>Agent 问答审计 <span>{{ roomAudit.entries.length }}</span></h3>
-              <div v-if="roomAudit.entries.length" class="agent-audit-list">
-                <article v-for="entry in [...roomAudit.entries].reverse()" :key="entry.id" class="agent-audit-item">
-                  <div class="agent-audit-meta"><strong>{{ entry.player_name || entry.player_id }}</strong><small>{{ formatDate(entry.created_at) }}</small></div>
-                  <p><b>玩家提问：</b> {{ entry.question }}</p>
-                  <p><b>AI 回答：</b> {{ entry.answer }}</p>
-                  <small v-if="entry.tool_used" class="agent-tool-badge">调用工具：{{ entry.tool_name || "未知工具" }} · {{ entry.tool_status || "completed" }}</small>
-                  <small v-else class="agent-tool-badge muted">未调用工具</small>
-                  <small v-if="entry.clue_ids?.length" class="agent-tool-badge">发放线索：{{ entry.clue_ids.join(", ") }}</small>
-                  <details v-if="toolDataText(entry)" class="audit-tool-data"><summary>查看工具返回数据</summary><pre>{{ toolDataText(entry) }}</pre></details>
-                </article>
+                <div v-if="!recentAudits.length" class="empty">暂无审计条目</div>
               </div>
-              <p v-else class="detail-muted">还没有玩家向 AI 主持人提问。</p>
             </div>
-            <div class="detail-section admin-audit-section">
-              <h3>同伴互评 <span>{{ peerReviewRows(selectedRoom).length }} / {{ roomPlayers(selectedRoom).length }}</span></h3>
-              <div v-if="peerReviewRows(selectedRoom).length" class="peer-review-audit-list">
-                <div v-for="row in peerReviewRows(selectedRoom)" :key="row.voter">
-                  <strong>{{ row.voter }}</strong><small>最佳发言者：{{ row.bestSpeaker }} · 最佳推理者：{{ row.bestReasoner }}</small>
-                </div>
-              </div>
-              <p v-else class="detail-muted">尚未收到同伴互评。</p>
-            </div>
-            <details class="raw-snapshot"><summary>查看原始快照</summary><pre>{{ JSON.stringify(selectedRoom, null, 2) }}</pre></details>
+          </div>
+        </template>
+
+        <!-- 剧本 -->
+        <template v-else>
+          <div class="card">
+            <header><h2>按剧本汇总</h2><div class="sp"></div><em>{{ scriptRows.length }} 套剧本</em></header>
+            <table v-if="scriptRows.length">
+              <thead>
+                <tr>
+                  <th class="no">剧本</th><th class="no">房间</th><th class="no">进行中</th><th class="no">玩家</th>
+                  <th class="no">事件</th><th class="no">线索</th><th class="no">AI 请求</th><th class="no">异常</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="row in scriptRows"
+                  :key="row.scriptId"
+                  class="clickable"
+                  @click="statusFilter = 'all'; query = row.scriptId; go('rooms')"
+                >
+                  <td><b>{{ row.scriptId }}</b> <small style="color: var(--faint)">v{{ row.version }}</small></td>
+                  <td class="num">{{ row.rooms }}</td>
+                  <td class="num">{{ row.live }}</td>
+                  <td class="num">{{ row.people }}</td>
+                  <td>
+                    <div class="rowflex">
+                      <span class="num">{{ num(row.events) }}</span>
+                      <div class="bar"><i :style="barStyle(row.events, maxScriptEvents)"></i></div>
+                    </div>
+                  </td>
+                  <td class="num">{{ row.clues }}</td>
+                  <td class="num">{{ row.requests }}</td>
+                  <td>
+                    <span v-if="row.failures" class="pill failed">{{ row.failures }}</span>
+                    <span v-else class="pill ok">正常</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty"><b>还没有房间</b>开一局之后才有剧本数据。</div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <div class="scrim" :class="{ on: drawerOpen }" @click="closeDrawer"></div>
+    <section v-if="selectedRoom" class="drawer" :class="{ on: drawerOpen }" aria-label="房间详情">
+      <header>
+        <div class="sp">
+          <h2>{{ selectedRoom.id }} · {{ selectedRoom.scriptId }}</h2>
+          <div class="meta">
+            {{ statusCn(selectedRoom.status) }} · {{ stageCn(selectedRoom.stageId) }} ·
+            {{ selectedRoom.playerCount }}/{{ selectedRoom.requiredPlayers }} 人 · {{ fullTime(selectedRoom.createdAt) }} 创建
+          </div>
+        </div>
+        <button class="x" type="button" aria-label="关闭详情" @click="closeDrawer"><X :size="15" /></button>
+      </header>
+      <div class="tabs">
+        <button
+          v-for="item in TABS"
+          :key="item.key"
+          type="button"
+          :class="{ on: drawerTab === item.key }"
+          @click="setTab(item.key)"
+        >{{ item.label }}</button>
+      </div>
+      <div class="scroll">
+        <!-- 概览 -->
+        <template v-if="drawerTab === 'summary'">
+          <div class="stats">
+            <div class="stat"><span>事件</span><b>{{ num(selectedRoom.eventCount) }}</b></div>
+            <div class="stat"><span>玩家消息</span><b>{{ num(selectedRoom.messageCount) }}</b></div>
+            <div class="stat"><span>搜证动作</span><b>{{ num(selectedRoom.investigationCount) }}</b></div>
+            <div class="stat"><span>线索发放</span><b>{{ num(selectedRoom.clueCount) }}</b></div>
+          </div>
+          <div class="sect">本局统计</div>
+          <div class="kv"><span>AI 请求 / 工具调用</span><b>{{ selectedRoom.aiRequests }} / {{ selectedRoom.toolCalls }}</b></div>
+          <div class="kv">
+            <span>失败运行 / 工具错误</span>
+            <b :style="{ color: selectedRoom.failedRuns + selectedRoom.toolFailed ? 'var(--warn)' : 'var(--ok)' }">
+              {{ selectedRoom.failedRuns }} / {{ selectedRoom.toolFailed }}
+            </b>
+          </div>
+          <div class="kv"><span>Token 合计</span><b>{{ num(selectedRoom.tokenTotal) }}</b></div>
+          <div class="kv"><span>阶段变更次数</span><b>{{ num(selectedRoom.stageChangeCount) }}</b></div>
+
+          <div class="sect">阶段进度</div>
+          <div class="rowflex wrap">
+            <template v-for="(stage, index) in STAGE_FLOW" :key="stage">
+              <span
+                class="pill"
+                :class="{ playing: stage === selectedRoom.stageId, ok: STAGE_FLOW.indexOf(selectedRoom.stageId) > index }"
+              >{{ stageCn(stage) }}</span>
+              <span v-if="index < STAGE_FLOW.length - 1" style="color: var(--faint)">·</span>
+            </template>
+          </div>
+
+          <div class="sect">投票分布</div>
+          <div v-for="row in voteRows" :key="row.target" class="votebar">
+            <span class="n">{{ nameOf(selectedRoom, row.target) }}</span>
+            <div class="bar"><i :style="barStyle(row.votes, row.max)"></i></div>
+            <span class="num">{{ row.votes }}</span>
+          </div>
+          <p v-if="!voteRows.length" class="muted-line">还没有人投票。</p>
+          <p v-if="selectedRoom.voteTied" style="color: var(--warn); font-size: 12px">票数持平，需要主持人裁定。</p>
+
+          <template v-if="selectedRoom.ending">
+            <div class="sect">结局</div>
+            <div class="kv"><span>{{ selectedRoom.ending.title || selectedRoom.ending.id }}</span><b>{{ selectedRoom.ending.totalVotes || selectedRoom.ending.total_votes }} 票</b></div>
           </template>
-          <div v-else class="admin-detail-placeholder"><Database :size="23" /><strong>选择一个房间</strong><span>右侧显示完整运行快照</span></div>
-        </aside>
-      </section>
+          <template v-if="selectedRoom.publicClueIds.length">
+            <div class="sect">公开线索</div>
+            <div class="rowflex wrap">
+              <span v-for="clueId in selectedRoom.publicClueIds" :key="clueId" class="pill">{{ clueId }}</span>
+            </div>
+          </template>
+        </template>
+
+        <!-- 玩家 -->
+        <template v-else-if="drawerTab === 'players'">
+          <div v-if="!selectedRoom.players.length" class="empty"><b>这个房间还没有玩家</b></div>
+          <template v-else>
+            <div class="sect">行为汇总</div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="no">玩家</th><th class="no">角色</th><th class="no">消息</th><th class="no">提问</th>
+                  <th class="no">地点</th><th class="no">翻查</th><th class="no">线索</th><th class="no">投票</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="player in selectedRoom.players" :key="player.id">
+                  <tr class="player-row" @click="togglePlayer(player.id)">
+                    <td><b>{{ player.name }}</b><span v-if="player.isHost" class="pill">房主</span></td>
+                    <td>{{ player.characterId || "—" }}</td>
+                    <td class="num">{{ player.stats?.message_count ?? 0 }}</td>
+                    <td class="num">{{ player.stats?.question_count ?? 0 }}</td>
+                    <td class="num">{{ player.stats?.location_count ?? player.enteredLocations.length }}</td>
+                    <td class="num">{{ player.stats?.inspection_count ?? player.inspectedObjects.length }}</td>
+                    <td class="num">{{ player.clueIds.length }}</td>
+                    <td>
+                      <span v-if="player.stats?.has_voted" class="pill ok">{{ nameOf(selectedRoom, player.stats.vote).split(" · ")[0] }}</span>
+                      <span v-else class="pill">未投</span>
+                    </td>
+                  </tr>
+                  <tr v-if="openPlayerId === player.id">
+                    <td colspan="8">
+                      <div class="history">
+                        <div class="sect" style="margin-top:0">该玩家完整行为</div>
+                        <p v-if="!playerHistory(player.id)" class="muted-line">正在读取…</p>
+                        <template v-else>
+                          <p v-if="!playerHistory(player.id).events.length" class="muted-line">这个玩家还没有留下事件。</p>
+                          <div v-for="event in [...playerHistory(player.id).events].reverse()" :key="event.id" class="ev">
+                            <time>{{ shortTime(event.created_at) }}</time>
+                            <span class="t">{{ event.event_type }}</span>
+                            <p class="wrap-text">{{ eventText(event) }}</p>
+                          </div>
+                        </template>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+
+            <div class="sect">搜证足迹</div>
+            <div v-for="player in selectedRoom.players" :key="`foot-${player.id}`" class="kv">
+              <span>{{ player.name }} <small style="color: var(--faint)">{{ player.characterId || "" }}</small></span>
+              <b>{{ player.enteredLocations.length }} 个地点 · {{ player.inspectedObjects.length }} 件物品 · {{ player.clueIds.length }} 条线索</b>
+            </div>
+
+            <div class="sect">最后发言</div>
+            <div v-for="player in selectedRoom.players.filter((item) => item.lastMessage)" :key="`msg-${player.id}`" class="qa">
+              <p class="q">{{ player.name }}</p>
+              <p class="a">{{ player.lastMessage }}</p>
+            </div>
+            <p v-if="!selectedRoom.players.some((item) => item.lastMessage)" class="muted-line">玩家还没有发言。</p>
+          </template>
+        </template>
+
+        <!-- 事件流 -->
+        <template v-else-if="drawerTab === 'events'">
+          <div class="rowflex wrap" style="margin-bottom: 12px">
+            <button
+              v-for="type in selectedEventTypes"
+              :key="type"
+              type="button"
+              class="chip"
+              :class="{ on: eventFilter === type }"
+              @click="eventFilter = type"
+            >{{ type === "all" ? `全部 ${selectedRoom.events.length}` : type }}</button>
+          </div>
+          <div v-for="event in selectedEvents" :key="event.id" class="ev">
+            <time>{{ shortTime(event.created_at) }}</time>
+            <span class="t">{{ event.event_type }}</span>
+            <p class="wrap-text" :title="eventText(event)">{{ eventText(event) }}</p>
+            <span class="pill">{{ event.actor_player_id ? String(event.actor_player_id).slice(0, 6) : "系统" }}</span>
+          </div>
+          <div v-if="!selectedEvents.length" class="empty"><b>还没有事件</b></div>
+        </template>
+
+        <!-- AI 审计 -->
+        <template v-else-if="drawerTab === 'ai'">
+          <div class="stats">
+            <div class="stat"><span>请求</span><b>{{ selectedRoom.aiRequests }}</b></div>
+            <div class="stat"><span>工具调用</span><b>{{ selectedRoom.toolCalls }}</b></div>
+            <div class="stat"><span>线索投递</span><b>{{ num(selectedRoom.clueDelivery) }}</b></div>
+            <div class="stat">
+              <span>失败</span>
+              <b :style="{ color: selectedRoom.failedRuns + selectedRoom.toolFailed ? 'var(--warn)' : 'inherit' }">
+                {{ selectedRoom.failedRuns + selectedRoom.toolFailed }}
+              </b>
+            </div>
+          </div>
+
+          <div class="sect">工具状态</div>
+          <div v-for="(value, key) in selectedRoom.toolStatusCounts" :key="key" class="kv"><span>{{ key }}</span><b>{{ value }}</b></div>
+          <p v-if="!Object.keys(selectedRoom.toolStatusCounts).length" class="muted-line">本局还没有工具调用。</p>
+
+          <div class="sect">运行记录</div>
+          <div v-for="(run, index) in selectedRoom.runs" :key="`run-${index}`" class="qa">
+            <div class="f">
+              <span class="pill" :class="runPillClass(run.status)">{{ run.status }}</span>
+              <small>
+                {{ run.request_type || "" }} · {{ stageCn(run.stage_id) }} ·
+                {{ run.elapsed_ms != null ? Math.round(run.elapsed_ms) + "ms" : "—" }} ·
+                {{ num((run.input_tokens || 0) + (run.output_tokens || 0)) }} token · {{ fullTime(run.created_at) }}
+              </small>
+            </div>
+            <p v-if="run.error_code" class="a" style="color: var(--warn)">错误码 {{ run.error_code }}</p>
+          </div>
+          <p v-if="!selectedRoom.runs.length" class="muted-line">无运行记录。</p>
+
+          <div class="sect">问答审计</div>
+          <div v-for="entry in auditOfSelected?.entries || []" :key="entry.id" class="qa">
+            <p class="q">{{ entry.question || "（无提问文字）" }}</p>
+            <p class="a">{{ entry.answer || "（无回答文字）" }}</p>
+            <div class="f">
+              <span class="pill">{{ entry.visibility === "public" ? "公开" : "仅本人" }}</span>
+              <span v-if="entry.tool_used" class="pill" :class="toolPillClass(entry)">{{ entry.tool_name || "tool" }}</span>
+              <small>{{ entry.player_name || "" }} · {{ fullTime(entry.created_at) }}</small>
+            </div>
+          </div>
+          <p v-if="!auditOfSelected" class="muted-line">正在读取问答审计…</p>
+          <p v-else-if="!auditOfSelected.entries.length" class="muted-line">该房间暂无问答审计条目。</p>
+        </template>
+
+        <!-- 互评 -->
+        <template v-else>
+          <div v-if="!peerRows.length" class="empty">
+            <b>还没有人提交互评</b>
+            <div style="margin-top: 4px">互评在投票阶段之后由玩家提交。</div>
+          </div>
+          <div v-for="row in peerRows" :key="row.voterId" class="kv">
+            <span>{{ nameOf(selectedRoom, row.voterId) }}</span>
+            <b>最佳发言 {{ nameOf(selectedRoom, row.bestSpeakerId) }} · 最佳推理 {{ nameOf(selectedRoom, row.bestReasonerId) }}</b>
+          </div>
+        </template>
+      </div>
+      <footer>
+        <button class="primary" type="button" :disabled="actionBusy" @click="exportRoom"><Download :size="14" />导出 JSON</button>
+        <button class="ghost" type="button" @click="copyRoomId"><Copy :size="14" />复制房间号</button>
+        <div class="sp"></div>
+        <span style="font-size: 11px; color: var(--faint)"><Users :size="12" /> {{ selectedRoom.players.length }} 名玩家在册</span>
+        <button class="danger" type="button" :disabled="actionBusy" @click="removeRoom"><Trash2 :size="14" />删除房间</button>
+      </footer>
     </section>
+
+    <div class="toast" :class="{ on: !!toastText }">{{ toastText }}</div>
   </main>
 </template>
-
-<style scoped>
-.admin-page { min-height: 100vh; background: #eef1ee; }
-.admin-header { min-height: 66px; padding: 0 34px; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: #f7f8f7; background: var(--header); border-bottom: 1px solid #343c37; }
-.admin-header-brand, .admin-header-actions, .admin-sync { display: flex; align-items: center; gap: 10px; }
-.admin-header-brand small { display: block; margin-top: 4px; color: #aeb7b1; font-size: 9px; }
-.admin-header-brand strong { font-size: 14px; }
-.admin-header-icon { display: grid; place-items: center; width: 34px; height: 34px; color: #fff; background: var(--red); border-radius: 4px; }
-.admin-header-actions .icon-text-button { min-height: 34px; color: #d7ded9; background: #29312c; border-color: #414b44; }
-.admin-header-actions .icon-text-button:hover:not(:disabled) { color: #fff; border-color: #82958a; }
-.admin-user { color: #aeb7b1; font-size: 11px; }
-.admin-content { width: min(1280px, calc(100% - 48px)); margin: 0 auto; padding: 42px 0 70px; }
-.admin-page-intro { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
-.admin-eyebrow { color: var(--red); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
-.admin-page-intro h1 { margin: 7px 0; font-family: Georgia, "Songti SC", serif; font-size: 34px; font-weight: 600; }
-.admin-page-intro p { margin: 0; color: var(--muted); font-size: 13px; }
-.admin-sync { min-height: 32px; padding: 0 10px; color: var(--muted); background: #f8faf8; border: 1px solid var(--line); border-radius: 4px; font-size: 10px; }
-.admin-alert { padding: 10px 12px; color: #74272d; background: var(--red-soft); border: 1px solid #e5bdc0; border-radius: 4px; font-size: 11px; }
-.wide-admin-alert { margin: 18px 0 0; }
-.admin-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0; }
-.admin-metrics article { display: grid; grid-template-columns: 25px 1fr; align-items: center; column-gap: 8px; min-height: 86px; padding: 15px 17px; background: #fff; border: 1px solid var(--line); border-radius: 5px; }
-.admin-metrics svg { grid-row: 1 / span 2; color: var(--green); }
-.admin-metrics span { color: var(--muted); font-size: 10px; }
-.admin-metrics strong { margin-top: 4px; font-family: Georgia, serif; font-size: 27px; line-height: 1; }
-.admin-workspace { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(330px, .65fr); gap: 14px; align-items: start; }
-.admin-room-table-wrap, .admin-detail-panel { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 5px; }
-.admin-section-heading { min-height: 67px; padding: 14px 17px; border-bottom: 1px solid var(--line); }
-.admin-section-heading h2 { margin: 0 0 4px; font-size: 16px; }
-.admin-section-heading span { color: var(--muted); font-size: 10px; }
-.admin-room-table { display: grid; }
-.admin-room-row { display: grid; grid-template-columns: 105px minmax(140px, 1fr) 70px 85px 18px; align-items: center; gap: 14px; min-height: 70px; padding: 10px 16px; color: var(--ink); background: #fff; border: 0; border-bottom: 1px solid #edf0ee; text-align: left; }
-.admin-room-row:hover, .admin-room-row.selected { background: #f3f7f4; }
-.admin-room-row svg { color: var(--faint); }
-.room-id { overflow: hidden; color: var(--green-strong); font-family: Consolas, monospace; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.room-script, .room-script small { display: block; min-width: 0; }
-.room-script strong { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.room-script small { margin-top: 4px; color: var(--muted); font-size: 9px; }
-.room-status { justify-self: start; padding: 4px 6px; color: #58645c; background: #edf1ee; border-radius: 3px; font-size: 10px; white-space: nowrap; }
-.room-status[data-status="playing"], .room-status[data-status="active"] { color: #275c43; background: #e5f1e9; }
-.room-capacity { color: var(--muted); font-size: 10px; white-space: nowrap; }
-.admin-empty, .admin-detail-loading { min-height: 180px; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
-.admin-detail-panel { min-height: 420px; padding: 17px; }
-.admin-detail-actions { display: flex; align-items: center; gap: 6px; }
-.admin-detail-actions .icon-text-button { min-height: 29px; padding: 0 7px; color: var(--green-strong); background: #f5f8f5; border: 1px solid var(--line); border-radius: 4px; font-size: 10px; }
-.admin-detail-actions .icon-text-button.danger { color: #8a3035; }
-.admin-detail-actions .icon-text-button:disabled { opacity: .55; }
-.admin-detail-heading { display: flex; align-items: start; justify-content: space-between; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.admin-detail-heading span { color: var(--red); font-size: 9px; font-weight: 800; letter-spacing: .07em; }
-.admin-detail-heading h2 { margin: 5px 0 0; font-family: Consolas, monospace; font-size: 18px; }
-.admin-close-button { display: grid; place-items: center; width: 30px; height: 30px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 4px; }
-.detail-facts { margin: 0; }
-.detail-facts > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #edf0ee; }
-.detail-facts dt { color: var(--muted); font-size: 10px; }
-.detail-facts dd { max-width: 68%; margin: 0; overflow: hidden; font-size: 10px; font-weight: 700; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
-.detail-section { padding: 15px 0; border-bottom: 1px solid var(--line); }
-.detail-section h3 { display: flex; justify-content: space-between; margin: 0 0 9px; font-size: 11px; }
-.detail-section h3 span { color: var(--muted); font-weight: 400; }
-.detail-player-list { display: grid; gap: 7px; }
-.detail-player-list button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 8px; color: inherit; background: #f6f8f6; border: 0; border-left: 2px solid var(--green); text-align: left; cursor: pointer; }
-.detail-player-list button:hover, .detail-player-list button.selected { background: #e8f2eb; }
-.admin-player-primary { display: grid; min-width: 70px; }
-.detail-player-list strong, .detail-player-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.detail-player-list strong { font-size: 10px; }
-.detail-player-list small { color: var(--muted); font-size: 9px; }
-.detail-player-list .admin-player-activity { text-align: right; }
-.detail-muted { margin: 0; color: var(--muted); font-size: 10px; }
-.detail-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 15px 0; }
-.detail-stat-grid div { padding: 9px; background: #f6f8f6; }
-.detail-stat-grid span, .detail-stat-grid strong { display: block; }
-.detail-stat-grid span { color: var(--muted); font-size: 9px; }
-.detail-stat-grid strong { margin-top: 4px; font-size: 16px; }
-.summary-stat-grid { grid-template-columns: repeat(3, 1fr); padding: 0; }
-.summary-ending { margin: 10px 0 0; color: #315e43; font-size: 10px; line-height: 1.5; }
-.player-history-list { display: grid; gap: 7px; max-height: 300px; overflow: auto; }
-.player-history-list > div { padding: 8px; background: #f6f8f6; border-left: 2px solid #789b82; }
-.player-history-list strong, .player-history-list small { display: inline-block; }
-.player-history-list strong { color: var(--green-strong); font-size: 9px; }
-.player-history-list small { margin-left: 8px; color: var(--muted); font-size: 9px; }
-.player-history-list p { margin: 5px 0 0; color: #536057; font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
-.raw-snapshot { border-top: 1px solid var(--line); padding-top: 12px; }
-.raw-snapshot summary { color: var(--green); cursor: pointer; font-size: 10px; font-weight: 700; }
-.raw-snapshot pre { max-height: 260px; overflow: auto; margin: 10px 0 0; padding: 10px; color: #4e5a52; background: #f4f6f4; font-size: 9px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
-.agent-audit-list, .peer-review-audit-list { display: grid; gap: 8px; max-height: 420px; overflow: auto; }
-.agent-audit-item { padding: 10px; background: #f6f8f6; border-left: 2px solid var(--green); }
-.agent-audit-meta { display: flex; justify-content: space-between; gap: 8px; }
-.agent-audit-meta strong { font-size: 10px; }
-.agent-audit-meta small { color: var(--muted); font-size: 9px; }
-.agent-audit-item p { margin: 7px 0 0; color: #536057; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
-.agent-tool-badge { display: inline-block; margin-top: 7px; padding: 3px 5px; color: #315e43; background: #e4f0e7; font-size: 9px; }
-.agent-tool-badge.muted { color: var(--muted); background: #edf0ee; }
-.audit-tool-data { margin-top: 8px; color: var(--muted); font-size: 9px; }
-.audit-tool-data summary { cursor: pointer; font-weight: 700; }
-.audit-tool-data pre { max-height: 150px; overflow: auto; margin: 7px 0 0; padding: 8px; color: #4e5a52; background: #edf1ee; white-space: pre-wrap; overflow-wrap: anywhere; }
-.peer-review-audit-list > div { display: flex; justify-content: space-between; gap: 8px; padding: 8px; background: #f6f8f6; }
-.peer-review-audit-list strong { font-size: 10px; }
-.peer-review-audit-list small { color: var(--muted); font-size: 9px; text-align: right; }
-.admin-detail-placeholder { min-height: 385px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: var(--faint); text-align: center; }
-.admin-detail-placeholder strong { color: var(--muted); font-size: 12px; }
-.admin-detail-placeholder span { font-size: 10px; }
-.spin { animation: admin-spin 850ms linear infinite; }
-@keyframes admin-spin { to { transform: rotate(360deg); } }
-@media (max-width: 900px) { .admin-workspace { grid-template-columns: 1fr; } .admin-detail-panel { min-height: 260px; } .admin-detail-placeholder { min-height: 220px; } }
-@media (max-width: 650px) { .admin-header { padding: 0 16px; } .admin-header-actions .icon-text-button { padding: 0 8px; } .admin-user { display: none; } .admin-content { width: calc(100% - 28px); padding-top: 28px; } .admin-page-intro { display: block; } .admin-sync { width: max-content; margin-top: 16px; } .admin-metrics { grid-template-columns: repeat(2, 1fr); } .admin-room-row { grid-template-columns: 82px minmax(0, 1fr) 65px 18px; gap: 8px; } .room-capacity { display: none; } }
-</style>

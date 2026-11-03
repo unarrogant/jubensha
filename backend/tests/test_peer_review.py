@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.game_service import GameService
+from app.application.game.service import GameService
 
 
 class FakeRepository:
@@ -79,4 +79,3 @@ def test_peer_review_reveals_two_awards_after_every_player_votes(service):
             "votes": 2,
         }
     ]
-

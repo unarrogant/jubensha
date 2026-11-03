@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.repositories.room_repository import RoomRepository
+from app.interfaces.ports import RoomRepositoryPort
 
 class DMService:
     def __init__(
             self,
-            room_repository:RoomRepository,
+            room_repository:RoomRepositoryPort,
     ):
         self.room_repository=room_repository
 

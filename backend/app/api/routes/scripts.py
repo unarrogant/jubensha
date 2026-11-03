@@ -1,6 +1,6 @@
 from fastapi import APIRouter,HTTPException
 
-from app.services.script_loader import ScriptLoader
+from app.infrastructure.scripts.loader import ScriptLoader
 
 router=APIRouter()
 script_loader=ScriptLoader()

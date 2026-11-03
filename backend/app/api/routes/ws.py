@@ -18,7 +18,7 @@ from app.api.routes.rooms import (
     schedule_empty_room_cleanup,
     schedule_waiting_player_cleanup,
 )
-from app.realtime.connection_manager import connection_manager
+from app.infrastructure.realtime.manager import connection_manager
 from app.schemas.message import PlayerPrivateMessageCreate
 
 router=APIRouter()

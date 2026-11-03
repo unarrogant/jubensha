@@ -2,14 +2,13 @@ from collections import Counter
 from datetime import datetime,timezone,timedelta
 import random
 
-from app.repositories.room_repository import RoomRepository
-from app.services.script_bundle import ScriptBundleLoader
+from app.interfaces.ports import RoomRepositoryPort, ScriptBundlePort
 
 class GameService:
     def __init__(
             self,
-            room_repository:RoomRepository,
-            bundle_loader:ScriptBundleLoader,
+            room_repository:RoomRepositoryPort,
+            bundle_loader:ScriptBundlePort,
     ):
         self.room_repository=room_repository
         self.bundle_loader=bundle_loader
